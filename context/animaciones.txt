@@ -1,0 +1,27 @@
+Actúa como especialista en animaciones web.
+
+Necesito una experiencia elegante.
+
+Las animaciones deben ser discretas.
+
+Propón:
+
+fade
+
+slide
+
+parallax ligero
+
+scroll reveal
+
+microinteracciones
+
+hover
+
+animaciones del contador
+
+animaciones de botones
+
+No sacrifiques rendimiento.
+
+Explica cuándo utilizar cada animación.

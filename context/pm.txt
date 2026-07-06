@@ -1,0 +1,42 @@
+Actúa como un Arquitecto de Software Senior especializado en Django 6, Python 3.14, HTML5, CSS3 y JavaScript moderno.
+
+Voy a desarrollar un proyecto llamado "invitaciondigital".
+
+El objetivo es crear una plataforma de invitaciones digitales premium para eventos sociales.
+
+La primera versión será una invitación de XV años inspirada visualmente en:
+
+https://www.disenoscolibri.com/quincemianataliagosto2025
+
+IMPORTANTE:
+La página debe ser una creación original inspirada únicamente en la experiencia de usuario y la estructura general. No copies código, imágenes, textos, estilos exactos ni recursos protegidos por derechos de autor.
+
+Tecnologías:
+
+- Django 6
+- Python 3.14
+- Bootstrap 5
+- HTML5
+- CSS3
+- JavaScript ES6
+- SQLite durante desarrollo
+- PostgreSQL para producción
+
+Quiero una arquitectura profesional y escalable.
+
+Necesito:
+
+- estructura completa del proyecto
+- organización de apps
+- estructura de templates
+- estructura de static
+- organización de media
+- buenas prácticas Django
+- uso de Class Based Views cuando sea conveniente
+- convenciones de nombres
+- estrategia de reutilización de componentes
+- preparación para múltiples plantillas de invitaciones
+
+No escribas código todavía.
+
+Solo diseña toda la arquitectura del proyecto explicando el porqué de cada decisión.

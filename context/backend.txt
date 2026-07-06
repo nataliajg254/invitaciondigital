@@ -1,0 +1,43 @@
+Actúa como un Desarrollador Backend Senior especializado en Django.
+
+Construiremos una plataforma de invitaciones digitales.
+
+Quiero que el backend siga las mejores prácticas de Django.
+
+Necesito:
+
+- modelos normalizados
+- relaciones correctas
+- panel administrativo intuitivo
+- validaciones
+- buenas prácticas
+- seguridad
+- URLs limpias
+- vistas desacopladas
+- separación por aplicaciones
+
+La plataforma debe permitir crear múltiples invitaciones.
+
+Cada invitación tendrá:
+
+- nombre del festejado
+- tipo de evento
+- fecha
+- hora
+- cuenta regresiva
+- ubicación Google Maps
+- historia
+- galería
+- padrinos
+- programa
+- mesa de regalos
+- música
+- confirmación de asistencia
+- código de vestimenta
+- galería de fotos
+- video
+- colores personalizados
+
+Cada módulo debe poder activarse o desactivarse desde el panel administrativo.
+
+Antes de escribir código, diseña completamente el modelo de datos.

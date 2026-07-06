@@ -1,0 +1,551 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis XV Años - {{ invitation.host_name }}{% endblock %}
+
+{% block meta_description %}Acompáñame a celebrar mis XV años. {{ invitation.event_date|date:"d \d\e F, Y" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Hero Section */
+    .hero {
+        height: 100vh;
+        {% if invitation.hero_image %}
+        background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('{{ invitation.hero_image.url }}') {{ invitation.hero_image_position|default:"center" }}/cover no-repeat fixed;
+        {% else %}
+        background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('https://images.unsplash.com/photo-1519741497674-611481863552?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80') center/cover no-repeat fixed;
+        {% endif %}
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: white;
+        position: relative;
+    }
+    
+    .hero-content {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 3rem 2rem; /* Adjusted for mobile */
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        max-width: 90%;
+    }
+    
+    .hero h1 {
+        font-size: clamp(3rem, 10vw, 5rem); /* Responsive font size */
+        margin-bottom: 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .hero .subtitle {
+        font-size: 1.5rem;
+        letter-spacing: 5px;
+        text-transform: uppercase;
+        margin-bottom: 2rem;
+    }
+
+    /* Section Styles */
+    section {
+        padding: 6rem 0;
+    }
+    
+    .section-title {
+        text-align: center;
+        margin-bottom: 4rem;
+        color: var(--primary-color);
+        font-size: 3rem;
+        position: relative;
+    }
+    
+    .section-title::after {
+        content: '';
+        display: block;
+        width: 60px;
+        height: 3px;
+        background-color: var(--primary-color);
+        margin: 15px auto 0;
+        border-radius: 3px;
+    }
+
+    /* Glassmorphism Cards */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 15px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.05);
+        padding: 2rem;
+        height: 100%;
+        transition: transform 0.3s ease;
+    }
+    .glass-card:hover {
+        transform: translateY(-5px);
+    }
+
+    /* Countdown */
+    .countdown-box {
+        background: var(--primary-color);
+        color: var(--secondary-color);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 0 0.5rem;
+        min-width: 100px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .countdown-number {
+        font-size: 3rem;
+        font-weight: 600;
+        line-height: 1;
+    }
+    .countdown-label {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 5px;
+    }
+
+    /* Timeline (Program) */
+    .timeline {
+        position: relative;
+        padding-left: 3rem;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--primary-color);
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -3.35rem;
+        top: 0.5rem;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 2px var(--primary-color);
+    }
+    .timeline-time {
+        font-weight: bold;
+        color: var(--primary-color);
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Image Gallery */
+    .gallery-img {
+        width: 100%;
+        height: auto;
+        border-radius: 10px;
+        transition: transform 0.5s ease;
+        display: block;
+    }
+    .gallery-item {
+        overflow: hidden;
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+    }
+    .gallery-item:hover .gallery-img {
+        transform: scale(1.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 1. Hero Section -->
+<header class="hero">
+    <div class="hero-content" data-aos="zoom-in" data-aos-duration="1500">
+        <p class="subtitle">Mis XV Años</p>
+        <h1>{{ invitation.host_name }}</h1>
+        <p class="mt-4 fs-4 elegant-font">{{ invitation.event_date|date:"d . m . Y" }}</p>
+    </div>
+</header>
+
+<!-- 2. Countdown Module -->
+{% if invitation.show_countdown %}
+<section id="countdown" class="bg-light" style="padding: 4rem 0;">
+    <div class="container">
+        <div class="row justify-content-center text-center" data-aos="fade-up">
+            <h3 class="mb-4 elegant-font" style="color: var(--primary-color);">Faltan</h3>
+            <div class="d-flex justify-content-center flex-wrap" id="timer">
+                <div class="countdown-box">
+                    <div class="countdown-number" id="cd-days">00</div>
+                    <div class="countdown-label">Días</div>
+                </div>
+                <div class="countdown-box">
+                    <div class="countdown-number" id="cd-hours">00</div>
+                    <div class="countdown-label">Horas</div>
+                </div>
+                <div class="countdown-box">
+                    <div class="countdown-number" id="cd-mins">00</div>
+                    <div class="countdown-label">Min</div>
+                </div>
+                <div class="countdown-box">
+                    <div class="countdown-number" id="cd-secs">00</div>
+                    <div class="countdown-label">Seg</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- 3. Location Module -->
+{% if invitation.show_location %}
+<section id="location">
+    <div class="container">
+        <h2 class="section-title" data-aos="fade-up">Dónde y Cuándo</h2>
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center glass-card" data-aos="fade-up" data-aos-delay="100">
+                <div class="row">
+                    <div class="col-sm-6 mb-4 mb-sm-0 border-end">
+                        <i class="bi bi-calendar-event fs-1 mb-3" style="color: var(--primary-color);"></i>
+                        <h4 class="elegant-font">Fecha</h4>
+                        <p class="fs-5">{{ invitation.event_date|date:"l d \d\e F, Y" }}</p>
+                        <p class="fs-5">{{ invitation.event_time|time:"h:i A" }}</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <i class="bi bi-geo-alt fs-1 mb-3" style="color: var(--primary-color);"></i>
+                        <h4 class="elegant-font">Ubicación</h4>
+                        <p class="fs-5">Ver ubicación en el mapa</p>
+                        {% if invitation.google_maps_url %}
+                        <a href="{{ invitation.google_maps_url }}" target="_blank" class="btn btn-primary mt-2">
+                            <i class="bi bi-map me-2"></i>Abrir Google Maps
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- 4. Program Module -->
+{% if invitation.show_program and invitation.program_events.exists %}
+<section id="program" class="bg-light">
+    <div class="container">
+        <h2 class="section-title" data-aos="fade-up">Itinerario</h2>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="timeline">
+                    {% for event in invitation.program_events.all %}
+                    <div class="timeline-item" data-aos="fade-left" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                        <div class="timeline-time">{{ event.time|time:"h:i A" }}</div>
+                        <div class="glass-card">
+                            <h4 class="mb-2 elegant-font">{{ event.title }}</h4>
+                            {% if event.description %}
+                            <p class="text-muted mb-0">{{ event.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- 5. Sponsors Module -->
+{% if invitation.show_sponsors and invitation.sponsors.exists %}
+<section id="sponsors">
+    <div class="container">
+        <h2 class="section-title" data-aos="fade-up">Padrinos</h2>
+        <div class="row justify-content-center text-center">
+            {% for sponsor in invitation.sponsors.all %}
+            <div class="col-md-4 col-sm-6 mb-4" data-aos="zoom-in" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                <div class="glass-card">
+                    <h5 class="elegant-font mb-3" style="color: var(--primary-color);">{{ sponsor.role }}</h5>
+                    <p class="fs-5 mb-0">{{ sponsor.name }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- 6. Gallery Module -->
+{% if invitation.show_gallery and invitation.gallery_items.exists %}
+<section id="gallery" class="bg-dark text-white">
+    <div class="container">
+        <h2 class="section-title text-white" data-aos="fade-up">Galería</h2>
+        <div class="row">
+            {% for item in invitation.gallery_items.all %}
+            <div class="col-md-4 col-sm-6" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                <div class="gallery-item">
+                    {% if item.media_type == 'PHOTO' and item.image %}
+                    <img src="{{ item.image.url }}" alt="{{ item.caption }}" class="gallery-img">
+                    {% elif item.media_type == 'VIDEO' and item.video_url %}
+                    <!-- For simplicity, rendering an iframe placeholder. A proper embed requires parsing the URL -->
+                    <div class="ratio ratio-16x9">
+                        <iframe src="{{ item.video_url }}" allowfullscreen></iframe>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- 7. Gift Table Module -->
+{% if invitation.show_gift_table and invitation.gift_registries.exists %}
+<section id="gifts" class="bg-light">
+    <div class="container">
+        <h2 class="section-title" data-aos="fade-up">Mesa de Regalos</h2>
+        <div class="row justify-content-center text-center">
+            <div class="col-md-8 mb-5">
+                <p class="fs-5" data-aos="fade-up">El mejor regalo es tu presencia, pero si deseas tener un detalle conmigo:</p>
+            </div>
+            {% for gift in invitation.gift_registries.all %}
+            <div class="col-md-5 mb-4" data-aos="flip-left" data-aos-delay="100">
+                <div class="glass-card">
+                    <i class="bi bi-gift fs-1 mb-3" style="color: var(--primary-color);"></i>
+                    {% if gift.bank_name_or_store %}
+                    <h4 class="elegant-font">{{ gift.bank_name_or_store }}</h4>
+                    {% endif %}
+                    {% if gift.account_or_link %}
+                    <p class="fs-5 text-muted break-word">{{ gift.account_or_link }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- 8. Dress Code -->
+{% if invitation.show_dress_code and invitation.dress_code %}
+<section id="dress-code">
+    <div class="container text-center">
+        <div class="glass-card p-5" data-aos="zoom-in">
+            <i class="bi bi-suit-heart fs-1 mb-3" style="color: var(--primary-color);"></i>
+            <h2 class="section-title mb-3" style="margin-bottom: 2rem;">Código de Vestimenta</h2>
+            <p class="fs-4">{{ invitation.dress_code }}</p>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- 9. RSVP Module -->
+{% if invitation.show_rsvp %}
+<section id="rsvp" class="bg-dark text-white" style="padding: 8rem 0;">
+    <div class="container text-center">
+        <h2 class="section-title text-white" data-aos="fade-up">Confirmar Asistencia</h2>
+        {% if rsvp_expired %}
+            <div class="alert alert-secondary d-inline-block p-4 mt-4 text-center rounded-3" data-aos="zoom-in" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white;">
+                <h4 class="elegant-font mb-2">El periodo de confirmación ha concluido</h4>
+                {% if current_guest and current_guest.has_responded %}
+                    <p class="mb-0 mt-2 fs-5">{% if current_guest.is_attending %}Tienes <strong>{{ current_guest.confirmed_companions }}</strong> pase(s) confirmados.{% else %}Indicaste que no asistirás.{% endif %} ¡Nos vemos en la fiesta!</p>
+                {% else %}
+                    <p class="mb-0 mt-2 fs-5">Gracias a todos los que confirmaron. ¡Nos vemos en la fiesta!</p>
+                {% endif %}
+            </div>
+        {% else %}
+            {% if current_guest and current_guest.has_responded %}
+                <div class="alert alert-success d-inline-block p-4 mb-4 text-center rounded-3" data-aos="zoom-in" style="background: rgba(40, 167, 69, 0.2); border: 1px solid rgba(40, 167, 69, 0.4); color: white;">
+                    <h4 class="elegant-font mb-2">{% if current_guest.is_attending %}¡Gracias por confirmar tu asistencia!{% else %}Lamentamos que no nos acompañes.{% endif %}</h4>
+                    <p class="mb-0 mt-2 fs-5">{% if current_guest.is_attending %}Has confirmado <strong>{{ current_guest.confirmed_companions }}</strong> pase(s).{% endif %}</p>
+                </div>
+            {% else %}
+                <p class="fs-5 mb-5" data-aos="fade-up" data-aos-delay="100">Por favor, confirma tu asistencia para considerarte en este día especial.</p>
+            {% endif %}
+            
+            {% if effective_deadline %}
+            <div class="mb-5" data-aos="fade-up" data-aos-delay="150">
+                <p class="text-white fw-bold mb-3"><i class="bi bi-clock me-2"></i>Tienes hasta el {{ effective_deadline|date:"d \d\e F \a \l\a\s h:i A" }} para {% if current_guest.has_responded %}editar tu confirmación{% else %}confirmar{% endif %}.</p>
+                <div class="d-flex justify-content-center flex-wrap gap-3" id="rsvp-timer">
+                    <div class="countdown-box" style="width:70px; height:70px; padding: 10px; background: rgba(255,255,255,0.1);"><div id="r-days" class="fs-4 fw-bold">00</div><div style="font-size: 0.7rem;">Días</div></div>
+                    <div class="countdown-box" style="width:70px; height:70px; padding: 10px; background: rgba(255,255,255,0.1);"><div id="r-hours" class="fs-4 fw-bold">00</div><div style="font-size: 0.7rem;">Hrs</div></div>
+                    <div class="countdown-box" style="width:70px; height:70px; padding: 10px; background: rgba(255,255,255,0.1);"><div id="r-mins" class="fs-4 fw-bold">00</div><div style="font-size: 0.7rem;">Min</div></div>
+                    <div class="countdown-box" style="width:70px; height:70px; padding: 10px; background: rgba(255,255,255,0.1);"><div id="r-secs" class="fs-4 fw-bold">00</div><div style="font-size: 0.7rem;">Seg</div></div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <a href="#" class="btn {% if current_guest.has_responded %}btn-outline-light{% else %}btn-primary{% endif %} btn-lg hover-lift px-5 py-3" data-aos="zoom-in" data-aos-delay="200" data-bs-toggle="modal" data-bs-target="#rsvpModal">
+                {% if current_guest.has_responded %}Editar Confirmación{% else %}Confirmar Ahora{% endif %}
+            </a>
+        {% endif %}
+    </div>
+</section>
+
+<!-- RSVP Modal Placeholder -->
+<div class="modal fade" id="rsvpModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="color: var(--text-color);">
+      <div class="modal-header">
+        <h5 class="modal-title elegant-font">Confirmar Asistencia</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="rsvpForm">
+            {% csrf_token %}
+            {% if current_guest %}
+            <div class="alert alert-info text-center rounded-3 p-3 mb-4" style="background: rgba(255,255,255,0.1); border: 1px solid var(--primary-color);">
+                <h6 class="mb-1 elegant-font">¡Hola {{ current_guest.name }}!</h6>
+                <small>Tienes <strong>{{ current_guest.max_companions }}</strong> pases asignados.</small>
+            </div>
+            <input type="hidden" name="guest_token" value="{{ current_guest.token }}">
+            {% endif %}
+            <div class="mb-3">
+                <label class="form-label">Nombre Completo</label>
+                <input type="text" class="form-control" name="guest_name" required {% if current_guest %}value="{{ current_guest.name }}" readonly{% else %}placeholder="Ej. Juan Pérez"{% endif %}>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">¿Asistirás?</label>
+                <select class="form-select" name="attending" required>
+                    <option value="true" {% if current_guest.has_responded and current_guest.is_attending %}selected{% endif %}>Sí, confirmadísimo</option>
+                    <option value="false" {% if current_guest.has_responded and not current_guest.is_attending %}selected{% endif %}>No podré asistir</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">{% if current_guest %}Pases a Confirmar{% else %}Número de Acompañantes{% endif %}</label>
+                <input type="number" class="form-control" name="number_of_companions" min="0" {% if current_guest %}max="{{ current_guest.max_companions }}"{% else %}max="10"{% endif %} value="{% if current_guest.has_responded %}{{ current_guest.confirmed_companions }}{% else %}0{% endif %}">
+                <div class="form-text">{% if current_guest %}Selecciona cuántos de tus {{ current_guest.max_companions }} pases vas a usar.{% else %}Sin contarte a ti. Si vas solo, pon 0.{% endif %}</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Restricciones Alimenticias</label>
+                <input type="text" class="form-control" name="dietary_restrictions" placeholder="Opcional. Ej. Vegano, Alergia al maní">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Mensaje para {{ invitation.host_name }}</label>
+                <textarea class="form-control" name="comments" rows="2" placeholder="Opcional"></textarea>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary" id="btnSubmitRsvp">Enviar Confirmación</button>
+            </div>
+            <div id="rsvpAlert" class="alert mt-3 d-none" role="alert"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if invitation.show_countdown %}
+<script>
+    // Countdown Timer Logic
+    const eventDate = new Date("{{ invitation.event_date|date:'Y-m-d' }}T{{ invitation.event_time|time:'H:i:s' }}").getTime();
+    
+    const cdDays = document.getElementById("cd-days");
+    const cdHours = document.getElementById("cd-hours");
+    const cdMins = document.getElementById("cd-mins");
+    const cdSecs = document.getElementById("cd-secs");
+    
+    if(eventDate && cdDays) {
+        const timer = setInterval(function() {
+            const now = new Date().getTime();
+            const distance = eventDate - now;
+            
+            if (distance < 0) {
+                clearInterval(timer);
+                document.getElementById("timer").innerHTML = "<h3 class='elegant-font'>¡El gran día ha llegado!</h3>";
+                return;
+            }
+            
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            
+            cdDays.innerText = days.toString().padStart(2, '0');
+            cdHours.innerText = hours.toString().padStart(2, '0');
+            cdMins.innerText = minutes.toString().padStart(2, '0');
+            cdSecs.innerText = seconds.toString().padStart(2, '0');
+            
+        }, 1000);
+    }
+</script>
+{% endif %}
+
+{% if invitation.show_rsvp %}
+<script>
+    document.getElementById('rsvpForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubmitRsvp');
+        const alertBox = document.getElementById('rsvpAlert');
+        const formData = new FormData(this);
+        
+        const attendingVal = formData.get('attending');
+        const companionsVal = parseInt(formData.get('number_of_companions') || 0);
+
+        if (attendingVal === 'true' && companionsVal === 0) {
+            alertBox.classList.remove('d-none', 'alert-success');
+            alertBox.classList.add('alert-danger');
+            alertBox.innerText = 'Por favor selecciona el número de pases/invitados que vas a confirmar.';
+            return;
+        }
+        
+        btn.disabled = true;
+        btn.innerText = 'Enviando...';
+        alertBox.classList.add('d-none');
+        
+        fetch('{% url "rsvp:submit" invitation.slug %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alertBox.classList.remove('d-none', 'alert-danger');
+            if(data.status === 'success') {
+                alertBox.classList.add('alert-success');
+                alertBox.innerText = data.message;
+                this.reset();
+            } else {
+                alertBox.classList.add('alert-danger');
+                alertBox.innerText = data.message;
+            }
+        })
+        .catch(error => {
+            alertBox.classList.remove('d-none', 'alert-success');
+            alertBox.classList.add('alert-danger');
+            alertBox.innerText = 'Error de conexión. Inténtalo más tarde.';
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerText = 'Enviar Confirmación';
+        });
+    });
+</script>
+
+{% if not rsvp_expired and effective_deadline %}
+<script>
+    const rsvpDate = new Date("{{ effective_deadline|date:'Y-m-d' }}T{{ effective_deadline|time:'H:i:s' }}").getTime();
+    if (rsvpDate) {
+        const rtimer = setInterval(function() {
+            const now = new Date().getTime();
+            const distance = rsvpDate - now;
+            if (distance < 0) {
+                clearInterval(rtimer);
+                location.reload(); 
+                return;
+            }
+            document.getElementById("r-days").innerText = Math.floor(distance / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+            document.getElementById("r-hours").innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+            document.getElementById("r-mins").innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+            document.getElementById("r-secs").innerText = Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0');
+        }, 1000);
+    }
+</script>
+{% endif %}
+{% endif %}
+{% endblock %}
