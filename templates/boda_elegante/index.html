@@ -6,6 +6,18 @@
 
 {% block extra_css %}
 <style>
+
+    /* Fondo personalizado para secciones */
+    {% if invitation.section_background_image %}
+    .floral-bg, .bg-light, .bg-white, .minimal-card, .bg-dark {
+        background-image: url('{{ invitation.section_background_image.url }}') !important;
+        background-size: cover !important;
+        background-position: center !important;
+        background-attachment: fixed !important;
+        background-color: transparent !important;
+    }
+    {% endif %}
+
     /* Boda Elegante Theme */
     :root {
         --text-color: #4a4a4a;
@@ -113,8 +125,8 @@
     </div>
 </header>
 
-{% for section_name in ordered_sections %}
-    {% if section_name == 'parents' %}
+{% for section in ordered_sections %}
+    {% if section.type == 'parents' %}
 <!-- Parents Module -->
 {% if invitation.show_parents and invitation.parents.exists %}
 <section id="parents" class="py-5 bg-white">
@@ -147,11 +159,33 @@
 {% endif %}
 
 <!-- For brevity in this generation, including RSVP directly -->
-    {% elif section_name == 'rsvp' %}
+
+    {% elif section.type == 'separator' %}
+<!-- Separator Image -->
+<section class="separator-module" style="width: 100%; margin: 0; padding: 0;">
+    <img src="{{ section.image_url }}" alt="Separador" style="width: 100%; height: auto; display: block;">
+</section>
+    {% elif section.type == 'closing_message' %}
+<!-- Closing Message Module -->
+{% if invitation.show_closing_message and invitation.closing_message %}
+<section id="closing-message" class="floral-bg text-center" style="padding: 6rem 0;">
+    <div class="container">
+        <div class="glass-card d-inline-block px-5 py-4" data-aos="zoom-in" style="max-width: 800px;">
+            <h2 class="mb-0" style="font-family: 'Great Vibes', cursive; font-size: 3.5rem; color: var(--primary-color); font-weight: normal; line-height: 1.3;">
+                {{ invitation.closing_message|linebreaksbr }}
+            </h2>
+        </div>
+    </div>
+</section>
+{% endif %}
+    {% elif section.type == 'rsvp' %}
 {% if invitation.show_rsvp %}
 <section id="rsvp" class="bg-light text-center" style="padding: 7rem 0;">
     <div class="container">
         <h2 class="section-title" data-aos="fade-up">Acompáñanos</h2>
+        <p class="fs-5 mt-3 mb-5 text-muted" data-aos="fade-up" data-aos-delay="100" style="max-width: 600px; margin-left: auto; margin-right: auto;">
+            Te pedimos ser respetuoso con los lugares que ya hemos asignado para ti, en el pase de entrada que te hemos enviado.
+        </p>
         {% if rsvp_expired %}
             <div class="alert alert-secondary d-inline-block p-4 mt-4 text-center rounded-0" data-aos="zoom-in">
                 <h4 class="elegant-font mb-2">El periodo de confirmación ha concluido</h4>

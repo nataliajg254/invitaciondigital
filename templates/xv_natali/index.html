@@ -7,6 +7,18 @@
 
 {% block extra_css %}
 <style>
+
+    /* Fondo personalizado para secciones */
+    {% if invitation.section_background_image %}
+    .floral-bg, .bg-light, .bg-white, .minimal-card, .bg-dark {
+        background-image: url('{{ invitation.section_background_image.url }}') !important;
+        background-size: cover !important;
+        background-position: center !important;
+        background-attachment: fixed !important;
+        background-color: transparent !important;
+    }
+    {% endif %}
+
     /* Hero Section */
     .hero {
         height: 100vh;
@@ -182,8 +194,8 @@
     </div>
 </header>
 
-{% for section_name in ordered_sections %}
-    {% if section_name == 'countdown' %}
+{% for section in ordered_sections %}
+    {% if section.type == 'countdown' %}
 <!-- 2. Countdown Module -->
 {% if invitation.show_countdown %}
 <section id="countdown" class="floral-bg" style="padding: 4rem 0;">
@@ -212,7 +224,7 @@
     </div>
 </section>
 {% endif %}
-    {% elif section_name == 'ceremony' %}
+    {% elif section.type == 'ceremony' %}
 <!-- Ceremony Module -->
 {% if invitation.show_ceremony %}
 <section id="ceremony" class="floral-bg">
@@ -243,12 +255,12 @@
     </div>
 </section>
 {% endif %}
-    {% elif section_name == 'location' %}
+    {% elif section.type == 'location' %}
 <!-- 3. Location Module -->
 {% if invitation.show_location %}
 <section id="location" class="floral-bg">
     <div class="container">
-        <h2 class="section-title" data-aos="fade-up">Dónde y Cuándo</h2>
+        <h2 class="section-title" data-aos="fade-up">Recepción</h2>
         <div class="row justify-content-center">
             <div class="col-md-8 text-center glass-card" data-aos="fade-up" data-aos-delay="100">
                 <div class="row">
@@ -261,7 +273,11 @@
                     <div class="col-sm-6">
                         <i class="bi bi-geo-alt fs-1 mb-3" style="color: var(--primary-color);"></i>
                         <h4 class="elegant-font">Ubicación</h4>
+                        {% if invitation.location_name %}
+                        <p class="fs-5">{{ invitation.location_name }}</p>
+                        {% else %}
                         <p class="fs-5">Ver ubicación en el mapa</p>
+                        {% endif %}
                         {% if invitation.google_maps_url %}
                         <a href="{{ invitation.google_maps_url }}" target="_blank" class="btn btn-primary mt-2">
                             <i class="bi bi-map me-2"></i>Abrir Google Maps
@@ -274,7 +290,7 @@
     </div>
 </section>
 {% endif %}
-    {% elif section_name == 'program' %}
+    {% elif section.type == 'program' %}
 <!-- 4. Program Module -->
 {% if invitation.show_program and invitation.program_events.exists %}
 <section id="program" class="floral-bg">
@@ -300,7 +316,7 @@
     </div>
 </section>
 {% endif %}
-    {% elif section_name == 'parents' %}
+    {% elif section.type == 'parents' %}
 <!-- 4.5 Parents Module -->
 {% if invitation.show_parents and invitation.parents.exists %}
 <section id="parents" class="floral-bg">
@@ -335,7 +351,7 @@
     </div>
 </section>
 {% endif %}
-    {% elif section_name == 'sponsors' %}
+    {% elif section.type == 'sponsors' %}
 <!-- 5. Sponsors Module -->
 {% if invitation.show_sponsors and invitation.sponsors.exists %}
 <section id="sponsors" class="floral-bg">
@@ -354,7 +370,7 @@
     </div>
 </section>
 {% endif %}
-    {% elif section_name == 'gallery' %}
+    {% elif section.type == 'gallery' %}
 <!-- 6. Gallery Module -->
 {% if invitation.show_gallery and invitation.gallery_items.exists %}
 <section id="gallery" class="bg-dark text-white">
@@ -390,7 +406,7 @@
     </div>
 </section>
 {% endif %}
-    {% elif section_name == 'gift_table' %}
+    {% elif section.type == 'gift_table' %}
 <!-- 7. Gift Table Module -->
 {% if invitation.show_gift_table and invitation.gift_registries.exists %}
 <section id="gifts" class="floral-bg">
@@ -408,7 +424,11 @@
                     <h4 class="elegant-font">{{ gift.bank_name_or_store }}</h4>
                     {% endif %}
                     {% if gift.account_or_link %}
-                    <p class="fs-5 text-muted break-word">{{ gift.account_or_link }}</p>
+                        {% if 'http' in gift.account_or_link %}
+                        <a href="{{ gift.account_or_link }}" target="_blank" class="btn btn-primary mt-2 px-4 py-2" style="border-radius: 20px;">Ir al enlace</a>
+                        {% else %}
+                        <p class="fs-5 text-muted break-word">{{ gift.account_or_link }}</p>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -417,7 +437,7 @@
     </div>
 </section>
 {% endif %}
-    {% elif section_name == 'dress_code' %}
+    {% elif section.type == 'dress_code' %}
 <!-- 8. Dress Code -->
 {% if invitation.show_dress_code and invitation.dress_code %}
 <section id="dress-code" class="floral-bg">
@@ -430,12 +450,34 @@
     </div>
 </section>
 {% endif %}
-    {% elif section_name == 'rsvp' %}
+
+    {% elif section.type == 'separator' %}
+<!-- Separator Image -->
+<section class="separator-module" style="width: 100%; margin: 0; padding: 0;">
+    <img src="{{ section.image_url }}" alt="Separador" style="width: 100%; height: auto; display: block;">
+</section>
+    {% elif section.type == 'closing_message' %}
+<!-- Closing Message Module -->
+{% if invitation.show_closing_message and invitation.closing_message %}
+<section id="closing-message" class="floral-bg text-center" style="padding: 6rem 0;">
+    <div class="container">
+        <div class="glass-card d-inline-block px-5 py-4" data-aos="zoom-in" style="max-width: 800px;">
+            <h2 class="mb-0" style="font-family: 'Great Vibes', cursive; font-size: 3.5rem; color: var(--primary-color); font-weight: normal; line-height: 1.3;">
+                {{ invitation.closing_message|linebreaksbr }}
+            </h2>
+        </div>
+    </div>
+</section>
+{% endif %}
+    {% elif section.type == 'rsvp' %}
 <!-- 9. RSVP Module -->
 {% if invitation.show_rsvp %}
 <section id="rsvp" class="bg-dark text-white" style="padding: 8rem 0;">
     <div class="container text-center">
         <h2 class="section-title text-white" data-aos="fade-up">Confirmar Asistencia</h2>
+        <p class="fs-5 mt-3 mb-5 text-white-50" data-aos="fade-up" data-aos-delay="100" style="max-width: 600px; margin-left: auto; margin-right: auto;">
+            Te pedimos ser respetuoso con los lugares que ya hemos asignado para ti, en el pase de entrada que te hemos enviado.
+        </p>
         {% if rsvp_expired %}
             <div class="alert alert-secondary d-inline-block p-4 mt-4 text-center rounded-3" data-aos="zoom-in" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white;">
                 <h4 class="elegant-font mb-2">El periodo de confirmación ha concluido</h4>

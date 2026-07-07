@@ -28,7 +28,8 @@ class Invitation(models.Model):
     event_time = models.TimeField(verbose_name="Hora del Evento")
     rsvp_deadline = models.DateTimeField(blank=True, null=True, verbose_name="Fecha y Hora Límite de Confirmación (RSVP)")
     
-    google_maps_url = models.URLField(blank=True, null=True, verbose_name="Enlace de Google Maps")
+    location_name = models.CharField(max_length=150, blank=True, null=True, verbose_name="Nombre del Lugar de Recepción")
+    google_maps_url = models.URLField(blank=True, null=True, verbose_name="Enlace de Google Maps (Recepción)")
     
     # Ceremonia
     ceremony_name = models.CharField(max_length=150, blank=True, null=True, verbose_name="Nombre de Iglesia/Templo (Ceremonia)")
@@ -49,6 +50,7 @@ class Invitation(models.Model):
     custom_secondary_color = models.CharField(max_length=7, blank=True, null=True, verbose_name="Color Secundario (HEX)")
     hero_image = models.ImageField(upload_to='hero_images/', blank=True, null=True, verbose_name="Imagen Principal (Fondo)")
     hero_image_position = models.CharField(max_length=10, choices=HERO_POSITION_CHOICES, default='center', verbose_name="Alineación del Fondo")
+    section_background_image = models.ImageField(upload_to='backgrounds/', blank=True, null=True, verbose_name="Imagen de Fondo para Secciones", help_text="Opcional. Reemplaza el patrón de fondo estandar de las secciones.")
     
     music_url = models.URLField(blank=True, null=True, verbose_name="Enlace a música (Spotify/Audio)")
     
@@ -64,6 +66,8 @@ class Invitation(models.Model):
     show_gift_table = models.BooleanField(default=True, verbose_name="Mostrar Mesa de Regalos")
     show_music = models.BooleanField(default=True, verbose_name="Reproducir Música")
     show_rsvp = models.BooleanField(default=True, verbose_name="Mostrar RSVP")
+    show_closing_message = models.BooleanField(default=True, verbose_name="Mostrar Mensaje de Despedida")
+    closing_message = models.TextField(blank=True, null=True, verbose_name="Mensaje de Despedida", help_text="Ej. ¡Te espero con mucho anhelo y emoción... NO FALTES!")
     show_dress_code = models.BooleanField(default=True, verbose_name="Mostrar Código de Vestimenta")
     
     order_countdown = models.PositiveIntegerField(default=10, verbose_name="Orden Contador")
@@ -76,6 +80,7 @@ class Invitation(models.Model):
     order_gift_table = models.PositiveIntegerField(default=70, verbose_name="Orden Mesa de Regalos")
     order_dress_code = models.PositiveIntegerField(default=80, verbose_name="Orden Código de Vestimenta")
     order_rsvp = models.PositiveIntegerField(default=90, verbose_name="Orden Confirmación (RSVP)")
+    order_closing_message = models.PositiveIntegerField(default=100, verbose_name="Orden Mensaje de Despedida")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -140,3 +145,16 @@ class Parent(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.name}"
+
+class SeparatorImage(models.Model):
+    invitation = models.ForeignKey(Invitation, related_name='separator_images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='separators/', verbose_name="Imagen Separadora")
+    order = models.PositiveIntegerField(default=25, verbose_name="Orden (Posición)")
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = "Imagen Separadora"
+        verbose_name_plural = "Imágenes Separadoras"
+
+    def __str__(self):
+        return f"Separador {self.order} - {self.invitation.host_name}"
