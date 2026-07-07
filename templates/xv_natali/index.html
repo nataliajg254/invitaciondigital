@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Mis XV Años - {{ invitation.host_name }}{% endblock %}
 
@@ -32,7 +33,9 @@
     }
     
     .hero h1 {
-        font-size: clamp(3rem, 10vw, 5rem); /* Responsive font size */
+        font-family: 'Great Vibes', cursive;
+        font-size: clamp(4rem, 12vw, 6rem); /* Responsive font size slightly larger for cursive */
+        font-weight: normal;
         margin-bottom: 0;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
@@ -53,7 +56,9 @@
         text-align: center;
         margin-bottom: 4rem;
         color: var(--primary-color);
-        font-size: 3rem;
+        font-family: 'Great Vibes', cursive;
+        font-size: 4rem;
+        font-weight: normal;
         position: relative;
     }
     
@@ -84,24 +89,24 @@
 
     /* Countdown */
     .countdown-box {
-        background: var(--primary-color);
-        color: var(--secondary-color);
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin: 0 0.5rem;
-        min-width: 100px;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        background: transparent;
+        color: #000;
+        border: none;
+        border-radius: 8px;
+        padding: 0.6rem;
+        margin: 0 0.3rem;
+        min-width: 60px;
     }
     .countdown-number {
-        font-size: 3rem;
+        font-size: 1.5rem;
         font-weight: 600;
         line-height: 1;
     }
     .countdown-label {
-        font-size: 0.9rem;
+        font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-top: 5px;
+        margin-top: 3px;
     }
 
     /* Timeline (Program) */
@@ -157,6 +162,13 @@
     .gallery-item:hover .gallery-img {
         transform: scale(1.1);
     }
+
+    .floral-bg {
+        background-image: url("{% static 'img/fondo_floral.png' %}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
 </style>
 {% endblock %}
 
@@ -170,12 +182,14 @@
     </div>
 </header>
 
+{% for section_name in ordered_sections %}
+    {% if section_name == 'countdown' %}
 <!-- 2. Countdown Module -->
 {% if invitation.show_countdown %}
-<section id="countdown" class="bg-light" style="padding: 4rem 0;">
+<section id="countdown" class="floral-bg" style="padding: 4rem 0;">
     <div class="container">
         <div class="row justify-content-center text-center" data-aos="fade-up">
-            <h3 class="mb-4 elegant-font" style="color: var(--primary-color);">Faltan</h3>
+            <h3 class="mb-4" style="font-family: 'Great Vibes', cursive; font-size: 4rem; color: var(--primary-color); font-weight: normal;">Faltan</h3>
             <div class="d-flex justify-content-center flex-wrap" id="timer">
                 <div class="countdown-box">
                     <div class="countdown-number" id="cd-days">00</div>
@@ -198,10 +212,41 @@
     </div>
 </section>
 {% endif %}
-
+    {% elif section_name == 'ceremony' %}
+<!-- Ceremony Module -->
+{% if invitation.show_ceremony %}
+<section id="ceremony" class="floral-bg">
+    <div class="container">
+        <h2 class="section-title" data-aos="fade-up">Ceremonia Religiosa</h2>
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center glass-card" data-aos="fade-up" data-aos-delay="100">
+                <div class="row">
+                    <div class="col-sm-6 mb-4 mb-sm-0 border-end">
+                        <i class="bi bi-clock fs-1 mb-3" style="color: var(--primary-color);"></i>
+                        <h4 class="elegant-font">Hora</h4>
+                        <p class="fs-5">{{ invitation.event_date|date:"l d \d\e F, Y" }}</p>
+                        <p class="fs-5">{{ invitation.ceremony_time|time:"h:i A" }}</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <i class="bi bi-geo-alt fs-1 mb-3" style="color: var(--primary-color);"></i>
+                        <h4 class="elegant-font">Ubicación</h4>
+                        <p class="fs-5">{{ invitation.ceremony_name }}</p>
+                        {% if invitation.ceremony_google_maps_url %}
+                        <a href="{{ invitation.ceremony_google_maps_url }}" target="_blank" class="btn btn-primary mt-2">
+                            <i class="bi bi-map me-2"></i>Abrir Google Maps
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+    {% elif section_name == 'location' %}
 <!-- 3. Location Module -->
 {% if invitation.show_location %}
-<section id="location">
+<section id="location" class="floral-bg">
     <div class="container">
         <h2 class="section-title" data-aos="fade-up">Dónde y Cuándo</h2>
         <div class="row justify-content-center">
@@ -229,10 +274,10 @@
     </div>
 </section>
 {% endif %}
-
+    {% elif section_name == 'program' %}
 <!-- 4. Program Module -->
 {% if invitation.show_program and invitation.program_events.exists %}
-<section id="program" class="bg-light">
+<section id="program" class="floral-bg">
     <div class="container">
         <h2 class="section-title" data-aos="fade-up">Itinerario</h2>
         <div class="row justify-content-center">
@@ -255,10 +300,45 @@
     </div>
 </section>
 {% endif %}
-
+    {% elif section_name == 'parents' %}
+<!-- 4.5 Parents Module -->
+{% if invitation.show_parents and invitation.parents.exists %}
+<section id="parents" class="floral-bg">
+    <div class="container text-center">
+        {% if invitation.event_type == 'XV' %}
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6" data-aos="zoom-in">
+                    <div class="glass-card p-5">
+                        <h2 class="mb-4" style="font-family: 'Great Vibes', cursive; font-size: 4rem; color: var(--text-color); font-weight: normal;">Mis Padres</h2>
+                        {% for parent in invitation.parents.all %}
+                        <p class="elegant-font mb-0 text-uppercase" style="font-size: 1.8rem; letter-spacing: 2px;">{{ parent.name }}</p>
+                        {% if not forloop.last %}
+                        <p class="elegant-font my-3" style="font-size: 2.5rem; color: var(--text-color);">&amp;</p>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <h2 class="section-title" data-aos="fade-up">Con la bendición de nuestros padres</h2>
+            <div class="row justify-content-center text-center">
+                {% for parent in invitation.parents.all %}
+                <div class="col-md-5 col-sm-6 mb-4" data-aos="zoom-in" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                    <div class="glass-card">
+                        <h5 class="elegant-font mb-3" style="color: var(--primary-color);">{{ parent.role }}</h5>
+                        <p class="fs-4 mb-0">{{ parent.name }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+    {% elif section_name == 'sponsors' %}
 <!-- 5. Sponsors Module -->
 {% if invitation.show_sponsors and invitation.sponsors.exists %}
-<section id="sponsors">
+<section id="sponsors" class="floral-bg">
     <div class="container">
         <h2 class="section-title" data-aos="fade-up">Padrinos</h2>
         <div class="row justify-content-center text-center">
@@ -274,35 +354,46 @@
     </div>
 </section>
 {% endif %}
-
+    {% elif section_name == 'gallery' %}
 <!-- 6. Gallery Module -->
 {% if invitation.show_gallery and invitation.gallery_items.exists %}
 <section id="gallery" class="bg-dark text-white">
     <div class="container">
         <h2 class="section-title text-white" data-aos="fade-up">Galería</h2>
-        <div class="row">
-            {% for item in invitation.gallery_items.all %}
-            <div class="col-md-4 col-sm-6" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
-                <div class="gallery-item">
-                    {% if item.media_type == 'PHOTO' and item.image %}
-                    <img src="{{ item.image.url }}" alt="{{ item.caption }}" class="gallery-img">
-                    {% elif item.media_type == 'VIDEO' and item.video_url %}
-                    <!-- For simplicity, rendering an iframe placeholder. A proper embed requires parsing the URL -->
-                    <div class="ratio ratio-16x9">
-                        <iframe src="{{ item.video_url }}" allowfullscreen></iframe>
+        <div class="row justify-content-center">
+            <div class="col-md-10" data-aos="fade-up">
+                <div id="galleryCarousel" class="carousel slide" data-bs-ride="carousel">
+                    <div class="carousel-inner shadow-lg" style="border-radius: 20px;">
+                        {% for item in invitation.gallery_items.all %}
+                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                            {% if item.media_type == 'PHOTO' and item.image %}
+                            <img src="{{ item.image.url }}" alt="{{ item.caption }}" class="d-block w-100" style="height: 600px; object-fit: cover;">
+                            {% elif item.media_type == 'VIDEO' and item.video_url %}
+                            <div class="ratio ratio-16x9" style="height: 600px;">
+                                <iframe src="{{ item.video_url }}" allowfullscreen style="object-fit: cover;"></iframe>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endif %}
+                    <button class="carousel-control-prev" type="button" data-bs-target="#galleryCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true" style="filter: drop-shadow(0px 0px 5px rgba(0,0,0,0.8));"></span>
+                        <span class="visually-hidden">Anterior</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#galleryCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true" style="filter: drop-shadow(0px 0px 5px rgba(0,0,0,0.8));"></span>
+                        <span class="visually-hidden">Siguiente</span>
+                    </button>
                 </div>
             </div>
-            {% endfor %}
         </div>
     </div>
 </section>
 {% endif %}
-
+    {% elif section_name == 'gift_table' %}
 <!-- 7. Gift Table Module -->
 {% if invitation.show_gift_table and invitation.gift_registries.exists %}
-<section id="gifts" class="bg-light">
+<section id="gifts" class="floral-bg">
     <div class="container">
         <h2 class="section-title" data-aos="fade-up">Mesa de Regalos</h2>
         <div class="row justify-content-center text-center">
@@ -326,10 +417,10 @@
     </div>
 </section>
 {% endif %}
-
+    {% elif section_name == 'dress_code' %}
 <!-- 8. Dress Code -->
 {% if invitation.show_dress_code and invitation.dress_code %}
-<section id="dress-code">
+<section id="dress-code" class="floral-bg">
     <div class="container text-center">
         <div class="glass-card p-5" data-aos="zoom-in">
             <i class="bi bi-suit-heart fs-1 mb-3" style="color: var(--primary-color);"></i>
@@ -339,7 +430,7 @@
     </div>
 </section>
 {% endif %}
-
+    {% elif section_name == 'rsvp' %}
 <!-- 9. RSVP Module -->
 {% if invitation.show_rsvp %}
 <section id="rsvp" class="bg-dark text-white" style="padding: 8rem 0;">
@@ -435,6 +526,9 @@
   </div>
 </div>
 {% endif %}
+{% endif %}
+{% endfor %}
+
 {% endblock %}
 
 {% block extra_js %}

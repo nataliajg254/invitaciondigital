@@ -47,9 +47,11 @@
     }
     
     .hero h1 {
-        font-size: clamp(2.5rem, 8vw, 4rem);
+        font-family: 'Great Vibes', cursive;
+        font-size: clamp(3.5rem, 10vw, 5rem);
         margin-bottom: 1rem;
-        font-style: italic;
+        font-weight: normal;
+        font-style: normal;
     }
 
     section {
@@ -60,8 +62,10 @@
         text-align: center;
         margin-bottom: 3rem;
         color: var(--primary-color);
-        font-size: 2.5rem;
-        font-style: italic;
+        font-family: 'Great Vibes', cursive;
+        font-size: 4rem;
+        font-weight: normal;
+        font-style: normal;
     }
 
     .minimal-card {
@@ -109,9 +113,41 @@
     </div>
 </header>
 
-<!-- Rest of the sections similar to Plantilla 1 but with minimal cards -->
-<!-- ... (Re-using logic but applying minimal-card classes and different aesthetics) ... -->
+{% for section_name in ordered_sections %}
+    {% if section_name == 'parents' %}
+<!-- Parents Module -->
+{% if invitation.show_parents and invitation.parents.exists %}
+<section id="parents" class="py-5 bg-white">
+    <div class="container text-center">
+        {% if invitation.event_type == 'XV' %}
+            <div class="row justify-content-center mt-5">
+                <div class="col-md-8 col-lg-6" data-aos="zoom-in">
+                    <h2 class="mb-4" style="font-family: 'Great Vibes', cursive; font-size: 4rem; color: var(--text-color); font-weight: normal;">Mis Padres</h2>
+                    {% for parent in invitation.parents.all %}
+                    <p class="elegant-font mb-0 text-uppercase" style="font-size: 1.8rem; letter-spacing: 2px;">{{ parent.name }}</p>
+                    {% if not forloop.last %}
+                    <p class="elegant-font my-3" style="font-size: 2.5rem; color: var(--text-color);">&amp;</p>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <h2 class="section-title" data-aos="fade-up">Con la bendición de nuestros padres</h2>
+            <div class="row justify-content-center mt-5">
+                {% for parent in invitation.parents.all %}
+                <div class="col-md-5 mb-4" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                    <h5 class="text-uppercase tracking-widest text-muted small mb-2">{{ parent.role }}</h5>
+                    <p class="fs-4 elegant-font mb-0">{{ parent.name }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
 <!-- For brevity in this generation, including RSVP directly -->
+    {% elif section_name == 'rsvp' %}
 {% if invitation.show_rsvp %}
 <section id="rsvp" class="bg-light text-center" style="padding: 7rem 0;">
     <div class="container">
@@ -198,6 +234,9 @@
   </div>
 </div>
 {% endif %}
+{% endif %}
+{% endfor %}
+
 {% endblock %}
 
 {% block extra_js %}
