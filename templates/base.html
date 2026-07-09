@@ -74,14 +74,20 @@
 <body>
     
     <!-- Audio Player (hidden) -->
-    {% if invitation.show_music and invitation.music_url %}
-    <audio id="bgMusic" loop autoplay>
-        <source src="{{ invitation.music_url }}" type="audio/mpeg">
-    </audio>
-    <!-- Mute/Unmute button -->
-    <button id="musicToggle" class="btn btn-light position-fixed bottom-0 end-0 m-4 rounded-circle shadow" style="z-index: 1050; width: 50px; height: 50px;">
-        <i class="bi bi-volume-up-fill" id="musicIcon"></i>
-    </button>
+    {% if invitation.show_music %}
+        {% if invitation.music_file or invitation.music_url %}
+        <audio id="bgMusic" loop autoplay>
+            {% if invitation.music_file %}
+            <source src="{{ invitation.music_file.url }}" type="audio/mpeg">
+            {% elif invitation.music_url %}
+            <source src="{{ invitation.music_url }}" type="audio/mpeg">
+            {% endif %}
+        </audio>
+        <!-- Mute/Unmute button -->
+        <button id="musicToggle" class="btn btn-light position-fixed bottom-0 end-0 m-4 rounded-circle shadow" style="z-index: 1050; width: 50px; height: 50px;">
+            <i class="bi bi-volume-up-fill fs-4" id="musicIcon"></i>
+        </button>
+        {% endif %}
     {% endif %}
 
     <main>

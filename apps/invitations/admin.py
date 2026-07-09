@@ -50,7 +50,7 @@ class InvitationAdmin(admin.ModelAdmin):
             'fields': ('event_date', 'event_time', 'rsvp_deadline')
         }),
         ('Detalles y Enlaces (Recepción)', {
-            'fields': ('location_name', 'google_maps_url', 'dress_code', 'music_url')
+            'fields': ('location_name', 'google_maps_url', 'dress_code', 'music_url', 'music_file')
         }),
         ('Ceremonia Religiosa', {
             'fields': ('ceremony_name', 'ceremony_time', 'ceremony_google_maps_url')

@@ -53,6 +53,7 @@ class Invitation(models.Model):
     section_background_image = models.ImageField(upload_to='backgrounds/', blank=True, null=True, verbose_name="Imagen de Fondo para Secciones", help_text="Opcional. Reemplaza el patrón de fondo estandar de las secciones.")
     
     music_url = models.URLField(blank=True, null=True, verbose_name="Enlace a música (Spotify/Audio)")
+    music_file = models.FileField(upload_to='music/', blank=True, null=True, verbose_name="Archivo de Música MP3")
     
     # Module toggles
     show_countdown = models.BooleanField(default=True, verbose_name="Mostrar Contador")

@@ -93,7 +93,18 @@
         padding: 15px 40px;
         color: #fff;
     }
+
+    /* Mobile Parallax Fix: Disable fixed background on mobile for smooth scrolling */
+    @media (max-width: 768px) {
+        .hero {
+            background-attachment: scroll !important;
+        }
+        .floral-bg, .bg-light, .bg-white, .minimal-card, .bg-dark {
+            background-attachment: scroll !important;
+        }
+    }
 </style>
+
 {% endblock %}
 
 {% block content %}
