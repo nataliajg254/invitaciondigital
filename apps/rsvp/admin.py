@@ -15,11 +15,11 @@ class GuestAdmin(admin.ModelAdmin):
         if not obj.phone_number:
             return "-"
             
-        # En producción usarías el dominio real (ej. tus-invitaciones.com)
-        # Por ahora generamos la estructura de la URL
-        link = f"/{obj.invitation.slug}/?guest={obj.token}"
+        # Reemplazar con tu dominio real en producción
+        domain = "tus-invitaciones.com"
+        link = f"https://{domain}/{obj.invitation.slug}/?guest={obj.token}"
         
-        message = f"¡Hola {obj.name}! Te invito a mi evento. Confirma tu asistencia en tu pase personal aquí: https://tudominio.com{link}"
+        message = f"¡Hola {obj.name}! Te invito cordialmente a mi evento. 🥳\n\nEn el siguiente enlace puedes ver todos los detalles y confirmar tu asistencia:\n{link}\n\n¡Te espero con mucha emoción!"
         encoded_message = urllib.parse.quote(message)
         
         url = f"https://wa.me/{obj.phone_number}?text={encoded_message}"
