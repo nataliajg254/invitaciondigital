@@ -118,19 +118,35 @@
                     bgMusic.play();
                     musicIcon.classList.remove('bi-volume-mute-fill');
                     musicIcon.classList.add('bi-volume-up-fill');
+                    musicToggle.classList.remove('user-paused');
                 } else {
                     bgMusic.pause();
                     musicIcon.classList.remove('bi-volume-up-fill');
                     musicIcon.classList.add('bi-volume-mute-fill');
+                    musicToggle.classList.add('user-paused');
                 }
             });
             
             // Auto play policy workaround (user interaction required)
-            document.body.addEventListener('click', function() {
-                if(bgMusic.paused && !musicToggle.classList.contains('user-paused')) {
-                    bgMusic.play().catch(e => console.log('Autoplay blocked'));
+            const startAudio = () => {
+                if (bgMusic.paused && !musicToggle.classList.contains('user-paused')) {
+                    bgMusic.play().then(() => {
+                        musicIcon.classList.remove('bi-volume-mute-fill');
+                        musicIcon.classList.add('bi-volume-up-fill');
+                        // Remover los listeners una vez que funcione
+                        ['click', 'touchstart', 'scroll'].forEach(evt => 
+                            window.removeEventListener(evt, startAudio)
+                        );
+                    }).catch(e => {
+                        console.log('Autoplay blocked waiting for interaction');
+                    });
                 }
-            }, {once: true});
+            };
+
+            // Escuchar cualquier tipo de interacción inicial
+            ['click', 'touchstart', 'scroll'].forEach(evt => 
+                window.addEventListener(evt, startAudio, { passive: true })
+            );
         }
     </script>
     

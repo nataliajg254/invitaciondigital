@@ -69,6 +69,7 @@ class Invitation(models.Model):
     show_rsvp = models.BooleanField(default=True, verbose_name="Mostrar RSVP")
     show_closing_message = models.BooleanField(default=True, verbose_name="Mostrar Mensaje de Despedida")
     closing_message = models.TextField(blank=True, null=True, verbose_name="Mensaje de Despedida", help_text="Ej. ¡Te espero con mucho anhelo y emoción... NO FALTES!")
+    default_pdf_message = models.TextField(default="Te invitamos cordialmente a celebrar este día tan especial con nosotros. Tu presencia es el mejor regalo.", verbose_name="Mensaje de Pase PDF por defecto")
     show_dress_code = models.BooleanField(default=True, verbose_name="Mostrar Código de Vestimenta")
     
     order_countdown = models.PositiveIntegerField(default=10, verbose_name="Orden Contador")

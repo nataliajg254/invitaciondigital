@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Pase de Invitación - {{ guest.name }}</title>
+    <style>
+        @page {
+            size: 1080px 1920px;
+            margin: 0px;
+            padding: 0px;
+
+            @frame bg_frame {
+                -pdf-frame-content: bg_content;
+                left: 0px; width: 1080px; top: 0px; height: 1920px;
+            }
+
+            @frame main_content {
+                left: 108px; width: 864px; top: 180px; height: 1560px;
+                /* Fondo totalmente transparente */
+                background-color: transparent;
+            }
+        }
+
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            color: #000000;
+        }
+
+        .spacer {
+            height: 80px;
+        }
+
+        .message-top {
+            font-size: 34px;
+            color: #333333;
+            line-height: 1.4;
+            font-weight: normal;
+        }
+
+        .guest-name {
+            font-size: 80px;
+            font-family: 'Georgia', serif;
+            color: #000000;
+            margin-top: 60px;
+            margin-bottom: 60px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .date {
+            font-size: 36px;
+            font-family: 'Georgia', serif;
+            color: #000000;
+            margin-bottom: 60px;
+            text-transform: uppercase;
+        }
+
+        .envelope-container {
+            margin: 40px 0;
+        }
+
+        .envelope {
+            width: 250px;
+            height: auto;
+        }
+
+        .instruction {
+            font-size: 30px;
+            color: #333333;
+            margin: 50px 0;
+            font-weight: normal;
+            line-height: 1.4;
+        }
+        
+        .instruction a {
+            color: #333333;
+            text-decoration: none;
+        }
+
+        .reserved-title {
+            font-size: 32px;
+            color: #000000;
+            margin-top: 60px;
+            font-weight: normal;
+        }
+
+        .places {
+            font-size: 70px;
+            font-family: 'Georgia', serif;
+            color: #000000;
+            margin: 20px 0;
+            letter-spacing: 2px;
+        }
+
+        .reserved-footer {
+            font-size: 30px;
+            color: #333333;
+            font-weight: normal;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="bg_content">
+        <img src="{{ background_url }}" style="width: 1080px; height: 1920px;" />
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="message-top">
+        {{ message|linebreaksbr }}
+    </div>
+    
+    <div class="guest-name">
+        {{ guest.name }}
+    </div>
+    
+    <div class="date">
+        {{ invitation.event_date|date:"l d F Y" }}
+    </div>
+    
+    <div class="envelope-container">
+        <!-- Uso de imagen PNG porque xhtml2pdf sí soporta hipervínculos en PNGs, pero falla en los SVG procesados por svglib -->
+        <a href="{{ link }}">
+            <img src="{{ STATIC_URL }}img/sobre_blanco.png" class="envelope" alt="Abrir Invitación">
+        </a>
+    </div>
+    
+    <div class="instruction">
+        <a href="{{ link }}">
+            Toca el sobre o haz clic aquí para acceder a la<br>
+            invitación y conocer todos los detalles.
+        </a>
+    </div>
+    
+    <div class="reserved-title">
+        He reservado
+    </div>
+    
+    <div class="places">
+        {{ guest.max_companions }} LUGARES
+    </div>
+    
+    <div class="reserved-footer">
+        Para que me acompañen<br>
+        y celebren conmigo.
+    </div>
+</body>
+</html>
