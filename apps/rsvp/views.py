@@ -1,7 +1,7 @@
-import os
+import json
 from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse, JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.contrib.admin.views.decorators import staff_member_required
 from django.template.loader import get_template
 from django.conf import settings
@@ -122,3 +122,66 @@ def generate_guest_pdf(request, guest_id):
         return response
     
     return HttpResponse('Error generating PDF', status=400)
+
+
+# --- GUEST DASHBOARD ENDPOINTS ---
+
+@staff_member_required
+def guest_dashboard(request, slug):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    return render(request, 'rsvp/guest_dashboard.html', {'invitation': invitation})
+
+
+@staff_member_required
+@require_http_methods(["GET", "POST"])
+def api_guests_list_create(request, slug):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    
+    if request.method == "GET":
+        guests = Guest.objects.filter(invitation=invitation).order_by('-created_at')
+        data = [{
+            'id': g.id,
+            'name': g.name,
+            'phone_number': g.phone_number,
+            'max_companions': g.max_companions,
+            'has_responded': g.has_responded,
+            'is_attending': g.is_attending,
+            'confirmed_companions': g.confirmed_companions,
+            'token': g.token
+        } for g in guests]
+        return JsonResponse(data, safe=False)
+        
+    elif request.method == "POST":
+        try:
+            body = json.loads(request.body)
+            guest = Guest.objects.create(
+                invitation=invitation,
+                name=body.get('name'),
+                phone_number=body.get('phone_number', ''),
+                max_companions=int(body.get('max_companions', 1))
+            )
+            return JsonResponse({'status': 'success', 'id': guest.id}, status=201)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@staff_member_required
+@require_http_methods(["PUT", "DELETE"])
+def api_guest_detail(request, slug, guest_id):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    guest = get_object_or_404(Guest, id=guest_id, invitation=invitation)
+    
+    if request.method == "PUT":
+        try:
+            body = json.loads(request.body)
+            guest.name = body.get('name', guest.name)
+            guest.phone_number = body.get('phone_number', guest.phone_number)
+            guest.max_companions = int(body.get('max_companions', guest.max_companions))
+            guest.save()
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            
+    elif request.method == "DELETE":
+        guest.delete()
+        return JsonResponse({'status': 'success'}, status=204)

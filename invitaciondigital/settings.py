@@ -10,11 +10,16 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Cargar variables de entorno desde el archivo .env
+load_dotenv(BASE_DIR / '.env')
 
 # Add apps/ directory to Python path
 sys.path.insert(0, str(BASE_DIR / 'apps'))
@@ -27,7 +32,7 @@ sys.path.insert(0, str(BASE_DIR / 'apps'))
 SECRET_KEY = 'django-insecure-4a^lo^3(l7z&_+wae1__%=0slqny9$vbll!2mn_s(cq$)793t&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 # ALLOWED_HOSTS = []
 
@@ -92,12 +97,36 @@ WSGI_APPLICATION = 'invitaciondigital.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if os.getenv('DB_NAME') and os.getenv('DB_USER'):
+    # Usar MySQL si están las credenciales en .env
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '3306'),
+        }
     }
-}
+    
+    # Importar pymysql y configurarlo como mysqlclient (MySQLdb)
+    # Esto evita errores si mysqlclient nativo falla al instalar
+    try:
+        import pymysql
+        pymysql.install_as_MySQLdb()
+    except ImportError:
+        pass
+else:
+    # Fallback a SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+print(DATABASES)
 
 
 # Password validation
@@ -124,7 +153,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'es-mx'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Monterrey'
 
 USE_I18N = True
 
@@ -143,3 +172,45 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',  # Todo lo demás a nivel INFO por defecto para evitar ruido
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Nuestras aplicaciones (Log detallado en DEBUG)
+        'core': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'invitations': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'rsvp': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'galleries': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+    },
+}
