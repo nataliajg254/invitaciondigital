@@ -24,10 +24,32 @@ def invitation_detail(request, slug):
     if effective_deadline and timezone.now() > effective_deadline:
         rsvp_expired = True
 
+    sections = [
+        {'type': 'countdown', 'order': invitation.order_countdown},
+        {'type': 'ceremony', 'order': invitation.order_ceremony},
+        {'type': 'location', 'order': invitation.order_location},
+        {'type': 'program', 'order': invitation.order_program},
+        {'type': 'parents', 'order': invitation.order_parents},
+        {'type': 'sponsors', 'order': invitation.order_sponsors},
+        {'type': 'gallery', 'order': invitation.order_gallery},
+        {'type': 'gift_table', 'order': invitation.order_gift_table},
+        {'type': 'dress_code', 'order': invitation.order_dress_code},
+        {'type': 'rsvp', 'order': invitation.order_rsvp},
+        {'type': 'closing_message', 'order': invitation.order_closing_message},
+    ]
+    
+    for sep in invitation.separator_images.all():
+        if sep.image:
+            sections.append({'type': 'separator', 'order': sep.order, 'image_url': sep.image.url})
+            
+    sections.sort(key=lambda x: x['order'])
+    ordered_sections = sections
+
     context = {
         'invitation': invitation,
         'current_guest': current_guest,
         'rsvp_expired': rsvp_expired,
         'effective_deadline': effective_deadline,
+        'ordered_sections': ordered_sections,
     }
     return render(request, template_name, context)

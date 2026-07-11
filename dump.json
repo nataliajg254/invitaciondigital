@@ -1,0 +1,338 @@
+[
+{
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+        "password": "pbkdf2_sha256$1200000$kmOuQL57KuSHWPQNRjUhGM$307JCADmvrJaZbSq4RfpXWcHcV6PdMi3rMnLjQ9o+2A=",
+        "last_login": "2026-07-05T04:20:12.667Z",
+        "is_superuser": true,
+        "username": "admin",
+        "first_name": "",
+        "last_name": "",
+        "email": "",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2026-07-04T18:55:28.847Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "sessions.session",
+    "pk": "wjhah3ulwblm01qth6zrt6w67eplw88m",
+    "fields": {
+        "session_data": ".eJxVjDsOwyAQBe9CHSH-hpTpfQa0sEtwEmHJ2FWUu0dILpL2zcx7swjHXuPRaYsLsiuT7PK7JchPagPgA9p95Xlt-7YkPhR-0s7nFel1O92_gwq9jtoXaTJ6EmR1cg6zRKBJKws6oCICL5QRymlpnS0uJJQiYEGRswmTZ58v9Ls4Aw:1wgEKy:PUgqthDiSwWi0CeMzceMWoI7iVIR_xPeC-li-t5oebE",
+        "expire_date": "2026-07-19T04:20:12.673Z"
+    }
+},
+{
+    "model": "invitations.invitation",
+    "pk": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+    "fields": {
+        "slug": "mis-xv-alexa",
+        "host_name": "Khyra Alexandra",
+        "event_type": "XV",
+        "template_choice": "xv_natali",
+        "event_date": "2026-08-22",
+        "event_time": "19:00:00",
+        "rsvp_deadline": "2026-08-08T18:00:00Z",
+        "location_name": "Salón Kumbrex",
+        "google_maps_url": "https://maps.app.goo.gl/9N7FpjsE9gRrdFqh8",
+        "ceremony_name": "Iglesia Edificadores",
+        "ceremony_time": "18:00:00",
+        "ceremony_google_maps_url": "https://maps.app.goo.gl/cCYYEqbqGLC8X2oY7",
+        "dress_code": "Formal, el color celeste es exclusivo para la quinceañera.",
+        "custom_primary_color": "#81bfd9",
+        "custom_secondary_color": "#e0ebf1",
+        "hero_image": "hero_images/DSC08961.jpg",
+        "hero_image_position": "top",
+        "section_background_image": "",
+        "music_url": null,
+        "music_file": "music/Bibbidi-Bobbidi-Boo_The_Magic_Song_Kw4rkfcVTdk_tVVaa2B.mp3",
+        "show_countdown": true,
+        "show_ceremony": true,
+        "show_location": true,
+        "show_history": true,
+        "show_gallery": true,
+        "show_sponsors": false,
+        "show_parents": true,
+        "show_program": true,
+        "show_gift_table": true,
+        "show_music": true,
+        "show_rsvp": true,
+        "show_closing_message": true,
+        "closing_message": "Te espero con mucho anhelo y emoción.",
+        "default_pdf_message": "Te invitamos cordialmente a celebrar este día tan especial con nosotros. Tu presencia es el mejor regalo.",
+        "show_dress_code": true,
+        "order_countdown": 15,
+        "order_ceremony": 20,
+        "order_location": 30,
+        "order_program": 40,
+        "order_parents": 10,
+        "order_sponsors": 50,
+        "order_gallery": 60,
+        "order_gift_table": 70,
+        "order_dress_code": 80,
+        "order_rsvp": 90,
+        "order_closing_message": 100,
+        "created_at": "2026-07-05T04:25:17.259Z",
+        "updated_at": "2026-07-10T04:12:40.268Z"
+    }
+},
+{
+    "model": "invitations.programevent",
+    "pk": 3,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "time": "19:00:00",
+        "title": "RECEPCIÓN",
+        "description": "",
+        "order": 0
+    }
+},
+{
+    "model": "invitations.programevent",
+    "pk": 7,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "time": "20:00:00",
+        "title": "CENA",
+        "description": "",
+        "order": 4
+    }
+},
+{
+    "model": "invitations.programevent",
+    "pk": 9,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "time": "20:45:00",
+        "title": "BRINDIS",
+        "description": "",
+        "order": 6
+    }
+},
+{
+    "model": "invitations.programevent",
+    "pk": 12,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "time": "21:05:00",
+        "title": "VALS",
+        "description": "",
+        "order": 9
+    }
+},
+{
+    "model": "invitations.programevent",
+    "pk": 15,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "time": "21:30:00",
+        "title": "BAILE",
+        "description": "",
+        "order": 12
+    }
+},
+{
+    "model": "invitations.giftregistry",
+    "pk": 1,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "bank_name_or_store": "Regalos & Sobres",
+        "account_or_link": null
+    }
+},
+{
+    "model": "invitations.giftregistry",
+    "pk": 3,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "bank_name_or_store": "Mesa de Regalos Amazon",
+        "account_or_link": "https://www.amazon.com.mx/registries/gl/guest-view/2HSGQ3MBHU1EE?ref_=cm_sw_r_apann_ggr-subnav-share_9MNPS2TCDCEMVERD9AHE&language=en-US"
+    }
+},
+{
+    "model": "invitations.parent",
+    "pk": 1,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "name": "Karlos Omar Rodríguez Rodríguez",
+        "role": "Padre"
+    }
+},
+{
+    "model": "invitations.parent",
+    "pk": 2,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "name": "Alicia Elizabeth Estrada Silva",
+        "role": "Madre"
+    }
+},
+{
+    "model": "invitations.separatorimage",
+    "pk": 1,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "image": "separators/kumbrex_sNd1ivm.webp",
+        "order": 25
+    }
+},
+{
+    "model": "invitations.separatorimage",
+    "pk": 2,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "image": "separators/DSC09077_b12eLIP.jpg",
+        "order": 12
+    }
+},
+{
+    "model": "invitations.separatorimage",
+    "pk": 3,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "image": "separators/edificadores.webp",
+        "order": 17
+    }
+},
+{
+    "model": "invitations.separatorimage",
+    "pk": 4,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "image": "separators/DSC08821.jpg",
+        "order": 35
+    }
+},
+{
+    "model": "invitations.separatorimage",
+    "pk": 5,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "image": "separators/DSC08836.jpg",
+        "order": 75
+    }
+},
+{
+    "model": "galleries.mediaitem",
+    "pk": 1,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "media_type": "PHOTO",
+        "image": "galleries/DSC09009.jpg",
+        "video_url": null,
+        "caption": "Hay momentos en la vida que son especiales por sí solos; compartirlos con las personas que quiero los convierte en momentos inolvidables.",
+        "order": 0
+    }
+},
+{
+    "model": "galleries.mediaitem",
+    "pk": 2,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "media_type": "PHOTO",
+        "image": "galleries/DSC08992.jpg",
+        "video_url": null,
+        "caption": "",
+        "order": 0
+    }
+},
+{
+    "model": "galleries.mediaitem",
+    "pk": 3,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "media_type": "PHOTO",
+        "image": "galleries/DSC08951.jpg",
+        "video_url": null,
+        "caption": "",
+        "order": 0
+    }
+},
+{
+    "model": "galleries.mediaitem",
+    "pk": 4,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "media_type": "PHOTO",
+        "image": "galleries/DSC08834.jpg",
+        "video_url": null,
+        "caption": "",
+        "order": 0
+    }
+},
+{
+    "model": "galleries.mediaitem",
+    "pk": 5,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "media_type": "PHOTO",
+        "image": "galleries/DSC08865.jpg",
+        "video_url": null,
+        "caption": "",
+        "order": 0
+    }
+},
+{
+    "model": "galleries.mediaitem",
+    "pk": 6,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "media_type": "PHOTO",
+        "image": "galleries/DSC08874.jpg",
+        "video_url": null,
+        "caption": "",
+        "order": 0
+    }
+},
+{
+    "model": "galleries.mediaitem",
+    "pk": 7,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "media_type": "PHOTO",
+        "image": "galleries/DSC08945.jpg",
+        "video_url": null,
+        "caption": "",
+        "order": 0
+    }
+},
+{
+    "model": "rsvp.guest",
+    "pk": 2,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "name": "Familia Estrada Silva",
+        "phone_number": "8342742331",
+        "max_companions": 2,
+        "token": "00302d61-dc74-4eb6-9e44-aefa84a6242e",
+        "is_public_rsvp": false,
+        "rsvp_deadline": null,
+        "has_responded": false,
+        "is_attending": false,
+        "confirmed_companions": 0,
+        "dietary_restrictions": "",
+        "created_at": "2026-07-10T17:54:53.863Z"
+    }
+},
+{
+    "model": "rsvp.guest",
+    "pk": 3,
+    "fields": {
+        "invitation": "fb662bff-3a25-44f2-a68b-fa2703d53ec0",
+        "name": "Familia Estrada Jiménez",
+        "phone_number": "8343110857",
+        "max_companions": 2,
+        "token": "c645c1a2-a648-4d63-8d39-1f81fdb60a2f",
+        "is_public_rsvp": false,
+        "rsvp_deadline": null,
+        "has_responded": false,
+        "is_attending": false,
+        "confirmed_companions": 0,
+        "dietary_restrictions": "",
+        "created_at": "2026-07-10T17:57:16.019Z"
+    }
+}
+]
