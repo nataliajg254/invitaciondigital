@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+    <!-- Envelope Body -->
+    <rect x="48" y="128" width="416" height="256" rx="20" ry="20" fill="#f8f9fa" stroke="#ced4da" stroke-width="8"/>
+    <!-- Top Flap -->
+    <path d="M 48 128 L 256 280 L 464 128" fill="none" stroke="#ced4da" stroke-width="8" stroke-linejoin="round"/>
+    <!-- Bottom Flap Details (Optional) -->
+    <path d="M 48 384 L 200 240" fill="none" stroke="#ced4da" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M 464 384 L 312 240" fill="none" stroke="#ced4da" stroke-width="8" stroke-linejoin="round"/>
+    <!-- Wax Seal -->
+    <circle cx="256" cy="280" r="35" fill="#d4af37" stroke="#b5952f" stroke-width="4"/>
+    <circle cx="256" cy="280" r="25" fill="#f1c40f"/>
+    <!-- Heart in Seal -->
+    <path d="M 256 288 C 256 288 245 275 245 268 C 245 260 252 258 256 265 C 260 258 267 260 267 268 C 267 275 256 288 256 288 Z" fill="#d4af37"/>
+</svg>

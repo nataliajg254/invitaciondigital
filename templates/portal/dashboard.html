@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Mis Invitaciones | Portal de Clientes{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Encabezado del Portal -->
+    <div class="d-flex justify-content-between align-items-center mb-5 border-bottom pb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">¡Hola, {{ request.user.first_name|default:request.user.username }}!</h1>
+            <p class="text-muted mb-0">Bienvenido a tu panel de control de eventos.</p>
+        </div>
+        <form method="post" action="{% url 'portal:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+            </button>
+        </form>
+    </div>
+
+    <!-- Lista de Invitaciones -->
+    <h4 class="mb-4 text-secondary">Tus Eventos</h4>
+    <div class="row g-4">
+        {% for inv in invitations %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0 rounded-4 overflow-hidden">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <span class="badge bg-primary rounded-pill px-3">{{ inv.get_event_type_display }}</span>
+                        <small class="text-muted"><i class="bi bi-calendar3"></i> {{ inv.event_date|date:"d M Y" }}</small>
+                    </div>
+                    <h5 class="card-title fw-bold">{{ inv.host_name }}</h5>
+                    <p class="card-text text-muted small mb-4">
+                        <i class="bi bi-geo-alt"></i> {{ inv.location_name|default:"Ubicación pendiente" }}
+                    </p>
+                </div>
+                <div class="card-footer bg-light border-0 p-3 text-center">
+                    <a href="{% url 'rsvp:guest_dashboard' inv.slug %}" class="btn btn-primary w-100">
+                        <i class="bi bi-people-fill"></i> Gestor de Invitados
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5 bg-light rounded-4">
+                <i class="bi bi-calendar-x display-1 text-muted mb-3"></i>
+                <h5 class="text-secondary">No tienes eventos asignados</h5>
+                <p class="text-muted">Si crees que esto es un error, por favor contacta al administrador.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
