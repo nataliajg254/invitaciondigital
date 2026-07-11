@@ -1,7 +1,28 @@
 import uuid
 from django.db import models
+from django.conf import settings
+
+
+class InvitationManager(models.Manager):
+    def filter(self, *args, **kwargs):
+        owner = kwargs.pop('owner', None)
+        queryset = super().filter(*args, **kwargs)
+        if owner is not None:
+            queryset = queryset.filter(administrators=owner)
+        return queryset
+
 
 class Invitation(models.Model):
+    objects = InvitationManager()
+
+    administrators = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='invitations',
+        verbose_name="Usuarios administradores",
+        help_text="Usuarios que pueden administrar esta invitación.",
+    )
+    
     EVENT_TYPES = [
         ('XV', 'XV Años'),
         ('BODA', 'Boda'),

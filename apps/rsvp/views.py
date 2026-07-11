@@ -10,6 +10,9 @@ from invitations.models import Invitation
 from .models import Guest
 from xhtml2pdf import pisa
 from io import BytesIO
+import openpyxl
+from openpyxl.styles import PatternFill, Font, Alignment
+from django.db import transaction
 
 @require_POST
 def submit_rsvp(request, slug):
@@ -60,19 +63,10 @@ def submit_rsvp(request, slug):
         guest_obj.save()
         
     else:
-        # It's a public RSVP
-        if not invitation.allow_public_rsvp:
-            return JsonResponse({'status': 'error', 'message': 'El RSVP público no está habilitado.'}, status=400)
-            
-        Guest.objects.create(
-            invitation=invitation,
-            name=guest_name,
-            is_public_rsvp=True,
-            has_responded=True,
-            is_attending=attending,
-            confirmed_companions=number_of_companions if attending else 0,
-            dietary_restrictions=f"{dietary_restrictions}\n\nComentarios: {comments}"
-        )
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Necesitas un enlace personalizado para confirmar asistencia.'
+        }, status=400)
         
     return JsonResponse({'status': 'success', 'message': '¡Gracias por confirmar tu asistencia!'})
 
@@ -124,15 +118,30 @@ def generate_guest_pdf(request, guest_id):
     return HttpResponse('Error generating PDF', status=400)
 
 
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from functools import wraps
+
+def check_invitation_access(view_func):
+    @login_required
+    @wraps(view_func)
+    def _wrapped_view(request, slug, *args, **kwargs):
+        invitation = get_object_or_404(Invitation, slug=slug)
+        has_access = invitation.administrators.filter(pk=request.user.pk).exists()
+        if not request.user.is_staff and not has_access:
+            raise PermissionDenied("No tienes permiso para administrar esta invitación.")
+        return view_func(request, slug, *args, **kwargs)
+    return _wrapped_view
+
 # --- GUEST DASHBOARD ENDPOINTS ---
 
-@staff_member_required
+@check_invitation_access
 def guest_dashboard(request, slug):
     invitation = get_object_or_404(Invitation, slug=slug)
     return render(request, 'rsvp/guest_dashboard.html', {'invitation': invitation})
 
 
-@staff_member_required
+@check_invitation_access
 @require_http_methods(["GET", "POST"])
 def api_guests_list_create(request, slug):
     invitation = get_object_or_404(Invitation, slug=slug)
@@ -147,7 +156,8 @@ def api_guests_list_create(request, slug):
             'has_responded': g.has_responded,
             'is_attending': g.is_attending,
             'confirmed_companions': g.confirmed_companions,
-            'token': g.token
+            'token': g.token,
+            'sheet_name': g.sheet_name
         } for g in guests]
         return JsonResponse(data, safe=False)
         
@@ -165,7 +175,7 @@ def api_guests_list_create(request, slug):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
-@staff_member_required
+@check_invitation_access
 @require_http_methods(["PUT", "DELETE"])
 def api_guest_detail(request, slug, guest_id):
     invitation = get_object_or_404(Invitation, slug=slug)
@@ -185,3 +195,131 @@ def api_guest_detail(request, slug, guest_id):
     elif request.method == "DELETE":
         guest.delete()
         return JsonResponse({'status': 'success'}, status=204)
+
+
+@check_invitation_access
+@require_http_methods(["GET"])
+def api_download_excel_template(request, slug):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Invitados"
+    
+    # Headers
+    headers = ["Nombre del Invitado o Familia", "Teléfono (WhatsApp)", "Número de Pases (Lugares)"]
+    ws.append(headers)
+    
+    # Styling headers
+    header_fill = PatternFill(start_color="4f46e5", end_color="4f46e5", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+        
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 40
+    ws.column_dimensions['B'].width = 25
+    ws.column_dimensions['C'].width = 25
+    
+    # Add an example row
+    ws.append(["Familia Ejemplo", "5215512345678", 4])
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="Plantilla_Invitados.xlsx"'
+    wb.save(response)
+    
+    return response
+
+
+@check_invitation_access
+@require_http_methods(["POST"])
+def api_upload_excel_guests(request, slug):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    
+    if 'file' not in request.FILES:
+        return JsonResponse({'status': 'error', 'message': 'No se encontró archivo'}, status=400)
+        
+    excel_file = request.FILES['file']
+    
+    try:
+        wb = openpyxl.load_workbook(excel_file, data_only=True)
+        ws = wb.active
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': 'Archivo Excel inválido o corrupto.'}, status=400)
+        
+    # Validation and Atomic Transaction
+    created_count = 0
+    updated_count = 0
+    
+    try:
+        with transaction.atomic():
+            for sheet_name in wb.sheetnames:
+                ws = wb[sheet_name]
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    if not row or not row[0]:
+                        continue  # Skip empty rows or rows without name
+                        
+                    name = str(row[0]).strip()
+                    
+                    # Parse phone carefully to remove decimal points if stored as numeric float in Excel
+                    phone = ""
+                    if row[1] is not None:
+                        val = row[1]
+                        if isinstance(val, float):
+                            phone = str(int(val)) if val.is_integer() else str(val)
+                        elif isinstance(val, int):
+                            phone = str(val)
+                        else:
+                            phone = str(val).strip()
+                            if phone.endswith('.0'):
+                                phone = phone[:-2]
+                    
+                    # Try to parse passes
+                    try:
+                        passes = int(row[2])
+                    except (ValueError, TypeError):
+                        passes = 1  # Default to 1 pass if invalid
+                        
+                    if not name:
+                        continue
+                        
+                    # Search for duplicate: by phone first, then by name
+                    guest = None
+                    if phone:
+                        guest = Guest.objects.filter(invitation=invitation, phone_number=phone).first()
+                    if not guest:
+                        guest = Guest.objects.filter(invitation=invitation, name=name).first()
+                        
+                    if guest:
+                        # Update existing guest
+                        guest.name = name
+                        if phone:
+                            guest.phone_number = phone
+                        guest.max_companions = passes
+                        guest.sheet_name = sheet_name
+                        guest.created_by = request.user
+                        guest.save()
+                        updated_count += 1
+                    else:
+                        # Create new guest
+                        Guest.objects.create(
+                            invitation=invitation,
+                            name=name,
+                            phone_number=phone,
+                            max_companions=passes,
+                            sheet_name=sheet_name,
+                            created_by=request.user
+                        )
+                        created_count += 1
+                    
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Error procesando el archivo: {str(e)}'}, status=400)
+        
+    return JsonResponse({
+        'status': 'success', 
+        'message': f'Importación completada: {created_count} creados, {updated_count} actualizados.'
+    })

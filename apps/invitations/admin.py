@@ -1,5 +1,8 @@
 from django import forms
 from django.contrib import admin
+from django.contrib.admin.sites import NotRegistered
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import Invitation, ProgramEvent, Sponsor, GiftRegistry, Parent, SeparatorImage
 
 class InvitationAdminForm(forms.ModelForm):
@@ -33,18 +36,27 @@ class ParentInline(admin.TabularInline):
     model = Parent
     extra = 1
 
+
+class InvitationAdministratorInline(admin.TabularInline):
+    model = Invitation.administrators.through
+    extra = 1
+    verbose_name = "Invitación asignada"
+    verbose_name_plural = "Invitaciones asignadas"
+
+
 @admin.register(Invitation)
 class InvitationAdmin(admin.ModelAdmin):
     form = InvitationAdminForm
-    list_display = ('host_name', 'event_type', 'event_date', 'slug')
+    list_display = ('host_name', 'event_type', 'event_date', 'slug', 'assigned_users')
     list_filter = ('event_type', 'event_date', 'template_choice')
     search_fields = ('host_name', 'slug')
     prepopulated_fields = {'slug': ('host_name',)}
+    filter_horizontal = ('administrators',)
     inlines = [ProgramEventInline, SponsorInline, ParentInline, GiftRegistryInline, SeparatorImageInline]
     
     fieldsets = (
         ('Información Principal', {
-            'fields': ('host_name', 'slug', 'event_type', 'template_choice')
+            'fields': ('host_name', 'slug', 'event_type', 'template_choice', 'administrators')
         }),
         ('Fecha y Hora', {
             'fields': ('event_date', 'event_time', 'rsvp_deadline')
@@ -79,3 +91,25 @@ class InvitationAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    def assigned_users(self, obj):
+        users = obj.administrators.all()
+        if not users:
+            return "-"
+        return ", ".join(user.get_username() for user in users)
+    assigned_users.short_description = "Usuarios"
+
+
+User = get_user_model()
+
+
+class UserInvitationAdmin(BaseUserAdmin):
+    inlines = BaseUserAdmin.inlines + (InvitationAdministratorInline,)
+
+
+try:
+    admin.site.unregister(User)
+except NotRegistered:
+    pass
+
+admin.site.register(User, UserInvitationAdmin)

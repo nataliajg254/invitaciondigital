@@ -29,10 +29,10 @@ sys.path.insert(0, str(BASE_DIR / 'apps'))
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-4a^lo^3(l7z&_+wae1__%=0slqny9$vbll!2mn_s(cq$)793t&'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-4a^lo^3(l7z&_+wae1__%=0slqny9$vbll!2mn_s(cq$)793t&')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # ALLOWED_HOSTS = []
 
@@ -57,11 +57,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Local Apps
-    'core',
-    'invitations',
-    'galleries',
-    'rsvp',
+    # Local apps
+    'core.apps.CoreConfig',
+    'invitations.apps.InvitationsConfig',
+    'rsvp.apps.RsvpConfig',
+    'galleries.apps.GalleriesConfig',
+    'portal.apps.PortalConfig',
 ]
 
 MIDDLEWARE = [
@@ -126,9 +127,6 @@ else:
         }
     }
 
-print(DATABASES)
-
-
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
@@ -163,15 +161,20 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
-
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_URL = '/portal/login/'
+LOGIN_REDIRECT_URL = '/portal/'
+LOGOUT_REDIRECT_URL = '/portal/login/'
 
 LOGGING = {
     'version': 1,
