@@ -1,0 +1,478 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Gestor de Invitados - {{ invitation.host_name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h3 mb-1 text-dark">Gestor de Invitados</h1>
+                <p class="text-muted mb-0">Administrando: <strong>{{ invitation.host_name }}</strong></p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-2">
+                <a href="/{{ invitation.slug }}/" target="_blank" class="btn btn-outline-secondary">
+                    <i class="bi bi-box-arrow-up-right"></i> Ver
+                </a>
+                
+                <!-- Botón Dropdown para Importación -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-success dropdown-toggle" type="button" id="dropdownExcel" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownExcel">
+                        <li><a class="dropdown-item" href="/api/{{ invitation.slug }}/guests/excel-template/"><i class="bi bi-download"></i> 1. Descargar Plantilla</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="document.getElementById('excelFileInput').click();"><i class="bi bi-upload"></i> 2. Subir Lista</a></li>
+                    </ul>
+                </div>
+                
+                <input type="file" id="excelFileInput" accept=".xlsx" style="display: none;" onchange="uploadExcel(this)">
+                
+                <button class="btn btn-primary" onclick="openGuestModal()">
+                    <i class="bi bi-plus-lg"></i> Añadir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" id="csrfToken">
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-white-50">Total Invitados</h6>
+                    <h2 class="mb-0" id="stat-total">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-white-50">Confirmaron Asistencia</h6>
+                    <h2 class="mb-0" id="stat-attending">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-white-50">Pases (Lugares) Asignados</h6>
+                    <h2 class="mb-0" id="stat-passes">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Table -->
+    <div class="card">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 flex-wrap gap-3">
+            <h5 class="mb-0 text-secondary fw-bold">Lista de Invitados</h5>
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                <div class="input-group" style="width: auto;">
+                    <span class="input-group-text bg-light border-0 text-muted"><i class="bi bi-funnel"></i></span>
+                    <select id="statusFilter" class="form-select bg-light border-0" style="min-width: 160px; font-size: 0.9rem;">
+                        <option value="all">Todos los estados</option>
+                        <option value="confirmed">Confirmados</option>
+                        <option value="pending">Por confirmar</option>
+                        <option value="declined">No asistirá</option>
+                    </select>
+                </div>
+                <div class="input-group" style="width: auto;">
+                    <span class="input-group-text bg-light border-0 text-muted"><i class="bi bi-file-earmark-spreadsheet"></i></span>
+                    <select id="sheetFilter" class="form-select bg-light border-0" style="min-width: 160px; font-size: 0.9rem;">
+                        <option value="all">Todas las hojas</option>
+                        <option value="manual">Registro manual</option>
+                    </select>
+                </div>
+                <div class="input-group" style="max-width: 250px;">
+                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control border-start-0 bg-light" placeholder="Buscar..." style="font-size: 0.9rem;">
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="guestsTable">
+                <thead class="table-light text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.5px;">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Teléfono</th>
+                        <th class="text-center">Pases Asignados</th>
+                        <th class="text-center">Pases Confirmados</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="guestsTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">Cargando invitados...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Guest Modal -->
+<div class="modal fade" id="guestModal" tabindex="-1" aria-labelledby="guestModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="guestModalLabel">Añadir Invitado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="guestForm">
+                    <input type="hidden" id="guestId">
+                    <div class="mb-3">
+                        <label for="guestName" class="form-label">Nombre del Invitado o Familia</label>
+                        <input type="text" class="form-control" id="guestName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="guestPhone" class="form-label">Teléfono (WhatsApp)</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="guestPhone" placeholder="Ej: 5215512345678">
+                        </div>
+                        <div class="form-text">Incluye el código de país. Ej: 52 para México.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="guestPasses" class="form-label">Número de Pases (Lugares)</label>
+                        <input type="number" class="form-control" id="guestPasses" min="1" value="2" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveGuest()" id="saveBtn">Guardar Invitado</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const API_URL = '/api/{{ invitation.slug }}/guests/';
+    const guestModal = new bootstrap.Modal(document.getElementById('guestModal'));
+    let guestsData = [];
+
+    // Load guests on start
+    document.addEventListener('DOMContentLoaded', loadGuests);
+
+    function getCsrfToken() {
+        return document.getElementById('csrfToken').value;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    async function loadGuests() {
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) throw new Error('Error cargando datos');
+            guestsData = await response.json();
+            
+            // Popular select de hojas dinámicamente
+            populateSheetFilter();
+            
+            renderTable();
+            updateStats();
+        } catch (error) {
+            Swal.fire('Error', 'No se pudieron cargar los invitados.', 'error');
+        }
+    }
+
+    function populateSheetFilter() {
+        const sheetFilter = document.getElementById('sheetFilter');
+        // Obtener valores únicos que no sean nulos/vacíos
+        const uniqueSheets = [...new Set(guestsData.map(g => g.sheet_name).filter(s => s))];
+        
+        // Mantener las 2 primeras opciones por defecto
+        sheetFilter.innerHTML = `
+            <option value="all">Todas las hojas</option>
+            <option value="manual">Registro manual</option>
+        `;
+        
+        uniqueSheets.forEach(sheet => {
+            const option = document.createElement('option');
+            option.value = sheet;
+            option.textContent = sheet;
+            sheetFilter.appendChild(option);
+        });
+        
+        // Restaurar valor previo si aún es válido
+        if (currentSheetFilter && (currentSheetFilter === 'all' || currentSheetFilter === 'manual' || uniqueSheets.includes(currentSheetFilter))) {
+            sheetFilter.value = currentSheetFilter;
+        } else {
+            currentSheetFilter = 'all';
+            sheetFilter.value = 'all';
+        }
+    }
+
+    let currentFilterText = '';
+    let currentStatusFilter = 'all';
+    let currentSheetFilter = 'all';
+
+    function renderTable() {
+        const tbody = document.getElementById('guestsTableBody');
+        tbody.innerHTML = '';
+        
+        const filtered = guestsData.filter(g => {
+            const matchText = g.name.toLowerCase().includes(currentFilterText.toLowerCase()) || 
+                              (g.phone_number && g.phone_number.includes(currentFilterText));
+                              
+            let matchStatus = true;
+            if (currentStatusFilter === 'confirmed') {
+                matchStatus = g.has_responded && g.is_attending;
+            } else if (currentStatusFilter === 'pending') {
+                matchStatus = !g.has_responded;
+            } else if (currentStatusFilter === 'declined') {
+                matchStatus = g.has_responded && !g.is_attending;
+            }
+            
+            let matchSheet = true;
+            if (currentSheetFilter === 'manual') {
+                matchSheet = !g.sheet_name;
+            } else if (currentSheetFilter !== 'all') {
+                matchSheet = g.sheet_name === currentSheetFilter;
+            }
+            
+            return matchText && matchStatus && matchSheet;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron invitados.</td></tr>`;
+            return;
+        }
+
+        filtered.forEach(g => {
+            const escapedName = escapeHtml(g.name);
+            const escapedPhone = escapeHtml(g.phone_number);
+            const escapedMaxCompanions = escapeHtml(g.max_companions);
+            let statusBadge = '<span class="badge bg-secondary">Sin respuesta</span>';
+            let confirmedCount = '<span class="text-muted">-</span>';
+            
+            if (g.has_responded) {
+                if (g.is_attending) {
+                    statusBadge = '<span class="badge bg-success">Confirmado</span>';
+                    confirmedCount = `<strong class="text-success">${g.confirmed_companions}</strong>`;
+                } else {
+                    statusBadge = '<span class="badge bg-danger">No asistirá</span>';
+                    confirmedCount = '<span class="text-danger">0</span>';
+                }
+            }
+
+            // Generate WA Link locally matching what we did in admin
+            let waLink = '';
+            if (g.phone_number) {
+                const domain = window.location.host; // Use current host
+                const msg = `¡Hola ${g.name}! Te invito cordialmente a mi evento. 🥳\n\nEn el siguiente enlace puedes ver todos los detalles y confirmar tu asistencia:\n${window.location.protocol}//${domain}/${'{{ invitation.slug }}'}/?guest=${g.token}\n\n¡Te espero con mucha emoción!`;
+                waLink = `<a href="https://wa.me/${g.phone_number}?text=${encodeURIComponent(msg)}" target="_blank" class="btn btn-sm btn-success me-1" title="Enviar WhatsApp"><i class="bi bi-whatsapp"></i></a>`;
+            }
+
+            const row = `
+                <tr>
+                    <td><strong>${escapedName}</strong></td>
+                    <td>${g.phone_number ? escapedPhone : '<span class="text-muted">-</span>'}</td>
+                    <td class="text-center">${escapedMaxCompanions}</td>
+                    <td class="text-center">${confirmedCount}</td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td class="text-end">
+                        ${waLink}
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editGuestById(${g.id})" title="Editar"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteGuest(${g.id})" title="Eliminar"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+
+    function updateStats() {
+        document.getElementById('stat-total').innerText = guestsData.length;
+        document.getElementById('stat-attending').innerText = guestsData.filter(g => g.has_responded && g.is_attending).length;
+        document.getElementById('stat-passes').innerText = guestsData.reduce((sum, g) => sum + g.max_companions, 0);
+    }
+
+    // Search filter
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        currentFilterText = e.target.value;
+        renderTable();
+    });
+
+    // Status filter
+    document.getElementById('statusFilter').addEventListener('change', (e) => {
+        currentStatusFilter = e.target.value;
+        renderTable();
+    });
+
+    // Sheet filter
+    document.getElementById('sheetFilter').addEventListener('change', (e) => {
+        currentSheetFilter = e.target.value;
+        renderTable();
+    });
+
+    function openGuestModal() {
+        document.getElementById('guestForm').reset();
+        document.getElementById('guestId').value = '';
+        document.getElementById('guestModalLabel').innerText = 'Añadir Invitado';
+        guestModal.show();
+    }
+
+    function editGuestById(guestId) {
+        const guest = guestsData.find(g => String(g.id) === String(guestId));
+        if (!guest) {
+            Swal.fire('Error', 'No se encontró el invitado seleccionado.', 'error');
+            return;
+        }
+
+        document.getElementById('guestId').value = guest.id;
+        document.getElementById('guestName').value = guest.name;
+        document.getElementById('guestPhone').value = guest.phone_number || '';
+        document.getElementById('guestPasses').value = guest.max_companions;
+        document.getElementById('guestModalLabel').innerText = 'Editar Invitado';
+        guestModal.show();
+    }
+
+    async function saveGuest() {
+        const id = document.getElementById('guestId').value;
+        const name = document.getElementById('guestName').value;
+        const phone = document.getElementById('guestPhone').value;
+        const passes = document.getElementById('guestPasses').value;
+
+        if (!name || !passes) {
+            Swal.fire('Atención', 'Nombre y Pases son requeridos', 'warning');
+            return;
+        }
+
+        const data = {
+            name: name,
+            phone_number: phone,
+            max_companions: parseInt(passes)
+        };
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${API_URL}${id}/` : API_URL;
+        
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) throw new Error('Error saving');
+
+            guestModal.hide();
+            Swal.fire({
+                icon: 'success',
+                title: 'Guardado',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            loadGuests();
+        } catch (error) {
+            Swal.fire('Error', 'Hubo un problema al guardar.', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function deleteGuest(id) {
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "Se eliminará al invitado y su respuesta (si la tiene).",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`${API_URL}${id}/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken()
+                        }
+                    });
+                    
+                    if (!response.ok) throw new Error('Error deleting');
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Eliminado',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    loadGuests();
+                } catch(error) {
+                    Swal.fire('Error', 'No se pudo eliminar al invitado.', 'error');
+                }
+            }
+        });
+    }
+    async function uploadExcel(input) {
+        if (!input.files || input.files.length === 0) return;
+        
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Mostrar Loading
+        Swal.fire({
+            title: 'Procesando...',
+            text: 'Subiendo e importando invitados, por favor espera.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        try {
+            const response = await fetch(`/api/{{ invitation.slug }}/guests/excel-upload/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                Swal.fire('¡Éxito!', result.message, 'success');
+                loadGuests();
+            } else {
+                Swal.fire('Error', result.message || 'Error al procesar el archivo.', 'error');
+            }
+        } catch (error) {
+            Swal.fire('Error', 'Hubo un problema de conexión al subir el archivo.', 'error');
+        } finally {
+            input.value = ''; // Reset input
+        }
+    }
+</script>
+{% endblock %}

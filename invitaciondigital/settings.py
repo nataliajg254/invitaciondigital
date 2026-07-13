@@ -8,6 +8,7 @@ import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # ==========================================================
 # BASE DIR
@@ -101,30 +102,27 @@ WSGI_APPLICATION = "invitaciondigital.wsgi.application"
 # DATABASE
 # ==========================================================
 
-if os.getenv("DB_NAME") and os.getenv("DB_USER"):
+required_db_vars = ["DB_NAME", "DB_USER"]
+missing_db_vars = [var for var in required_db_vars if not os.getenv(var)]
 
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": os.getenv("DB_NAME"),
-            "USER": os.getenv("DB_USER"),
-            "PASSWORD": os.getenv("DB_PASSWORD"),
-            "HOST": os.getenv("DB_HOST", "localhost"),
-            "PORT": os.getenv("DB_PORT", "3306"),
-            "OPTIONS": {
-                "charset": "utf8mb4",
-            },
-        }
+if missing_db_vars:
+    raise ImproperlyConfigured(
+        f"Faltan variables de entorno para MySQL: {', '.join(missing_db_vars)}"
+    )
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "3306"),
+        "OPTIONS": {
+            "charset": "utf8mb4",
+        },
     }
-
-else:
-
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
 
 # ==========================================================
 # PASSWORD VALIDATION

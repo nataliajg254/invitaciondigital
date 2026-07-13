@@ -2,6 +2,7 @@ import json
 from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.admin.views.decorators import staff_member_required
 from django.template.loader import get_template
 from django.conf import settings
@@ -136,9 +137,10 @@ def check_invitation_access(view_func):
 # --- GUEST DASHBOARD ENDPOINTS ---
 
 @check_invitation_access
+@ensure_csrf_cookie
 def guest_dashboard(request, slug):
     invitation = get_object_or_404(Invitation, slug=slug)
-    return render(request, 'rsvp/guest_dashboard.html', {'invitation': invitation})
+    return render(request, 'rsvp_guest_dashboard.html', {'invitation': invitation})
 
 
 @check_invitation_access
