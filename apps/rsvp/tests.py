@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from invitations.models import Invitation
+from rsvp.admin import normalize_whatsapp_phone
 from rsvp.models import Guest
 
 
@@ -80,3 +81,28 @@ class RsvpFlowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn('https://wa.me/525512345678', response['Location'])
         self.assertIn('http%3A//testserver/mis-xv/%3Fguest%3D', response['Location'])
+        self.guest.refresh_from_db()
+        self.assertTrue(self.guest.whatsapp_sent)
+
+    def test_whatsapp_phone_adds_mexico_country_code_to_local_number(self):
+        self.assertEqual(normalize_whatsapp_phone('8342742331'), '528342742331')
+        self.assertEqual(normalize_whatsapp_phone('(834) 274-2331'), '528342742331')
+        self.assertEqual(normalize_whatsapp_phone('5215512345678'), '525512345678')
+
+    def test_guests_api_includes_whatsapp_sent_status(self):
+        self.client.login(username='manager', password='pass12345')
+
+        response = self.client.get(reverse('invitations:api_guests_list_create', args=[self.invitation.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()[0]['whatsapp_sent'])
+
+    def test_guest_whatsapp_sent_endpoint_marks_guest_as_sent(self):
+        self.client.login(username='manager', password='pass12345')
+
+        response = self.client.post(reverse('invitations:api_guest_whatsapp_sent', args=[self.invitation.slug, self.guest.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'status': 'success', 'whatsapp_sent': True})
+        self.guest.refresh_from_db()
+        self.assertTrue(self.guest.whatsapp_sent)

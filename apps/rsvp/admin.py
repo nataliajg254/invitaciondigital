@@ -11,14 +11,16 @@ from .models import Guest
 
 def normalize_whatsapp_phone(phone_number):
     digits = re.sub(r'\D', '', phone_number or '')
+    if len(digits) == 10:
+        return f"52{digits}"
     if len(digits) == 13 and digits.startswith('521'):
         return f"52{digits[3:]}"
     return digits
 
 @admin.register(Guest)
 class GuestAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone_number', 'max_companions', 'is_attending', 'has_responded', 'whatsapp_link', 'pdf_link')
-    list_filter = ('has_responded', 'is_attending', 'is_public_rsvp', 'invitation')
+    list_display = ('name', 'phone_number', 'max_companions', 'whatsapp_sent', 'is_attending', 'has_responded', 'whatsapp_link', 'pdf_link')
+    list_filter = ('whatsapp_sent', 'has_responded', 'is_attending', 'is_public_rsvp', 'invitation')
     search_fields = ('name', 'phone_number')
     readonly_fields = ('token', 'has_responded', 'is_attending', 'confirmed_companions', 'dietary_restrictions', 'created_at', 'is_public_rsvp')
 
@@ -49,6 +51,10 @@ class GuestAdmin(admin.ModelAdmin):
         if not phone_number:
             messages.error(request, "Este invitado no tiene un teléfono válido para WhatsApp.")
             return redirect(reverse('admin:rsvp_guest_change', args=[guest.pk]))
+
+        if not guest.whatsapp_sent:
+            guest.whatsapp_sent = True
+            guest.save(update_fields=['whatsapp_sent', 'updated_at'])
 
         invitation_path = reverse('invitations:detail', args=[guest.invitation.slug])
         invitation_url = request.build_absolute_uri(f'{invitation_path}?guest={guest.token}')

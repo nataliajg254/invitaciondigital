@@ -159,7 +159,8 @@ def api_guests_list_create(request, slug):
             'is_attending': g.is_attending,
             'confirmed_companions': g.confirmed_companions,
             'token': g.token,
-            'sheet_name': g.sheet_name
+            'sheet_name': g.sheet_name,
+            'whatsapp_sent': g.whatsapp_sent,
         } for g in guests]
         return JsonResponse(data, safe=False)
         
@@ -197,6 +198,17 @@ def api_guest_detail(request, slug, guest_id):
     elif request.method == "DELETE":
         guest.delete()
         return JsonResponse({'status': 'success'}, status=204)
+
+
+@check_invitation_access
+@require_http_methods(["POST"])
+def api_guest_whatsapp_sent(request, slug, guest_id):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    guest = get_object_or_404(Guest, id=guest_id, invitation=invitation)
+    if not guest.whatsapp_sent:
+        guest.whatsapp_sent = True
+        guest.save(update_fields=['whatsapp_sent', 'updated_at'])
+    return JsonResponse({'status': 'success', 'whatsapp_sent': guest.whatsapp_sent})
 
 
 @check_invitation_access

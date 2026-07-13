@@ -104,12 +104,13 @@
                         <th class="text-center">Pases Asignados</th>
                         <th class="text-center">Pases Confirmados</th>
                         <th class="text-center">Estado</th>
+                        <th class="text-center">WhatsApp</th>
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="guestsTableBody">
                     <tr>
-                        <td colspan="5" class="text-center py-4 text-muted">Cargando invitados...</td>
+                        <td colspan="7" class="text-center py-4 text-muted">Cargando invitados...</td>
                     </tr>
                 </tbody>
             </table>
@@ -179,6 +180,9 @@
 
     function normalizeWhatsAppPhone(phoneNumber) {
         let digits = String(phoneNumber || '').replace(/\D/g, '');
+        if (digits.length === 10) {
+            return `52${digits}`;
+        }
         if (digits.length === 13 && digits.startsWith('521')) {
             digits = `52${digits.slice(3)}`;
         }
@@ -198,6 +202,27 @@
             updateStats();
         } catch (error) {
             Swal.fire('Error', 'No se pudieron cargar los invitados.', 'error');
+        }
+    }
+
+    async function markWhatsAppSent(guestId) {
+        try {
+            const response = await fetch(`${API_URL}${guestId}/whatsapp-sent/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                }
+            });
+
+            if (!response.ok) throw new Error('Error marking WhatsApp as sent');
+
+            const guest = guestsData.find(g => String(g.id) === String(guestId));
+            if (guest) {
+                guest.whatsapp_sent = true;
+                renderTable();
+            }
+        } catch (error) {
+            Swal.fire('Atención', 'Se abrió WhatsApp, pero no se pudo marcar como enviado.', 'warning');
         }
     }
 
@@ -260,7 +285,7 @@
         });
 
         if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron invitados.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No se encontraron invitados.</td></tr>`;
             return;
         }
 
@@ -281,13 +306,17 @@
                 }
             }
 
+            const whatsappStatusBadge = g.whatsapp_sent
+                ? '<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle"></i> Enviado</span>'
+                : '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-clock"></i> Pendiente</span>';
+
             // Generate WA Link locally matching what we did in admin
             let waLink = '';
             const whatsappPhone = normalizeWhatsAppPhone(g.phone_number);
             if (whatsappPhone) {
                 const domain = window.location.host; // Use current host
                 const msg = `¡Hola ${g.name}! Te invito cordialmente a mi evento. 🥳\n\nEn el siguiente enlace puedes ver todos los detalles y confirmar tu asistencia:\n${window.location.protocol}//${domain}/${'{{ invitation.slug }}'}/?guest=${g.token}\n\n¡Te espero con mucha emoción!`;
-                waLink = `<a href="https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}" target="_blank" class="btn btn-sm btn-success me-1" title="Enviar WhatsApp"><i class="bi bi-whatsapp"></i></a>`;
+                waLink = `<a href="https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}" target="_blank" class="btn btn-sm btn-success me-1" title="Enviar WhatsApp" onclick="markWhatsAppSent(${g.id})"><i class="bi bi-whatsapp"></i></a>`;
             }
 
             const row = `
@@ -297,6 +326,7 @@
                     <td class="text-center">${escapedMaxCompanions}</td>
                     <td class="text-center">${confirmedCount}</td>
                     <td class="text-center">${statusBadge}</td>
+                    <td class="text-center">${whatsappStatusBadge}</td>
                     <td class="text-end">
                         ${waLink}
                         <button class="btn btn-sm btn-outline-primary me-1" onclick="editGuestById(${g.id})" title="Editar"><i class="bi bi-pencil"></i></button>

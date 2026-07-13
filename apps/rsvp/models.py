@@ -17,6 +17,7 @@ class Guest(models.Model):
     # Excel y Auditoría
     sheet_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Hoja de Excel")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Registrado por")
+    whatsapp_sent = models.BooleanField(default=False, verbose_name="WhatsApp enviado")
     
     # Estado de confirmación
     has_responded = models.BooleanField(default=False, verbose_name="¿Ya respondió?")
