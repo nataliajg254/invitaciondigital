@@ -11,6 +11,8 @@ from .models import Guest
 
 def normalize_whatsapp_phone(phone_number):
     digits = re.sub(r'\D', '', phone_number or '')
+    if len(digits) == 10:
+        return f"52{digits}"
     if len(digits) == 13 and digits.startswith('521'):
         return f"52{digits[3:]}"
     return digits

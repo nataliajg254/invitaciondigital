@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from invitations.models import Invitation
+from rsvp.admin import normalize_whatsapp_phone
 from rsvp.models import Guest
 
 
@@ -80,3 +81,8 @@ class RsvpFlowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn('https://wa.me/525512345678', response['Location'])
         self.assertIn('http%3A//testserver/mis-xv/%3Fguest%3D', response['Location'])
+
+    def test_whatsapp_phone_adds_mexico_country_code_to_local_number(self):
+        self.assertEqual(normalize_whatsapp_phone('8342742331'), '528342742331')
+        self.assertEqual(normalize_whatsapp_phone('(834) 274-2331'), '528342742331')
+        self.assertEqual(normalize_whatsapp_phone('5215512345678'), '525512345678')
