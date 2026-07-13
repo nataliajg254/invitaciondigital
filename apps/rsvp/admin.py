@@ -1,10 +1,19 @@
 import urllib.parse
+import re
 from django.contrib import admin
+from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import path
 from django.urls import reverse
 from django.utils.html import format_html
 from .models import Guest
+
+
+def normalize_whatsapp_phone(phone_number):
+    digits = re.sub(r'\D', '', phone_number or '')
+    if len(digits) == 13 and digits.startswith('521'):
+        return f"52{digits[3:]}"
+    return digits
 
 @admin.register(Guest)
 class GuestAdmin(admin.ModelAdmin):
@@ -35,6 +44,12 @@ class GuestAdmin(admin.ModelAdmin):
 
     def whatsapp_redirect(self, request, guest_id):
         guest = get_object_or_404(Guest, pk=guest_id)
+        phone_number = normalize_whatsapp_phone(guest.phone_number)
+
+        if not phone_number:
+            messages.error(request, "Este invitado no tiene un teléfono válido para WhatsApp.")
+            return redirect(reverse('admin:rsvp_guest_change', args=[guest.pk]))
+
         invitation_path = reverse('invitations:detail', args=[guest.invitation.slug])
         invitation_url = request.build_absolute_uri(f'{invitation_path}?guest={guest.token}')
         message = (
@@ -44,7 +59,7 @@ class GuestAdmin(admin.ModelAdmin):
             "¡Te espero con mucha emoción!"
         )
         encoded_message = urllib.parse.quote(message)
-        return redirect(f'https://wa.me/{guest.phone_number}?text={encoded_message}')
+        return redirect(f'https://wa.me/{phone_number}?text={encoded_message}')
 
     def pdf_link(self, obj):
         url = reverse('rsvp:generate_guest_pdf', args=[obj.id])

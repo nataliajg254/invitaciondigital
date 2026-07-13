@@ -177,6 +177,14 @@
         }[char]));
     }
 
+    function normalizeWhatsAppPhone(phoneNumber) {
+        let digits = String(phoneNumber || '').replace(/\D/g, '');
+        if (digits.length === 13 && digits.startsWith('521')) {
+            digits = `52${digits.slice(3)}`;
+        }
+        return digits;
+    }
+
     async function loadGuests() {
         try {
             const response = await fetch(API_URL);
@@ -275,10 +283,11 @@
 
             // Generate WA Link locally matching what we did in admin
             let waLink = '';
-            if (g.phone_number) {
+            const whatsappPhone = normalizeWhatsAppPhone(g.phone_number);
+            if (whatsappPhone) {
                 const domain = window.location.host; // Use current host
                 const msg = `¡Hola ${g.name}! Te invito cordialmente a mi evento. 🥳\n\nEn el siguiente enlace puedes ver todos los detalles y confirmar tu asistencia:\n${window.location.protocol}//${domain}/${'{{ invitation.slug }}'}/?guest=${g.token}\n\n¡Te espero con mucha emoción!`;
-                waLink = `<a href="https://wa.me/${g.phone_number}?text=${encodeURIComponent(msg)}" target="_blank" class="btn btn-sm btn-success me-1" title="Enviar WhatsApp"><i class="bi bi-whatsapp"></i></a>`;
+                waLink = `<a href="https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}" target="_blank" class="btn btn-sm btn-success me-1" title="Enviar WhatsApp"><i class="bi bi-whatsapp"></i></a>`;
             }
 
             const row = `

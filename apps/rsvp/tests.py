@@ -78,5 +78,5 @@ class RsvpFlowTests(TestCase):
         response = self.client.get(reverse('admin:rsvp_guest_whatsapp', args=[self.guest.pk]))
 
         self.assertEqual(response.status_code, 302)
-        self.assertIn('https://wa.me/5215512345678', response['Location'])
+        self.assertIn('https://wa.me/525512345678', response['Location'])
         self.assertIn('http%3A//testserver/mis-xv/%3Fguest%3D', response['Location'])
