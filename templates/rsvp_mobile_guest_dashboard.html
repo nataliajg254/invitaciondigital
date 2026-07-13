@@ -1,0 +1,606 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Invitados - {{ invitation.host_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #f6f7fb;
+    }
+    .navbar .container {
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
+    }
+    .navbar-brand {
+        font-size: 0.95rem;
+    }
+    .navbar .me-3 {
+        display: none;
+    }
+    .mobile-hero {
+        background: #fff;
+        border-bottom: 1px solid #e9ecef;
+        padding: 1rem 0.9rem;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+    }
+    .mobile-shell {
+        padding: 0 0.9rem 6rem;
+    }
+    .mobile-title {
+        color: #212529;
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    .mobile-subtitle {
+        color: #6c757d;
+        font-size: 0.85rem;
+        margin: 0.1rem 0 0;
+    }
+    .quick-actions,
+    .stats-strip,
+    .guest-meta,
+    .guest-actions {
+        display: grid;
+        gap: 0.55rem;
+    }
+    .quick-actions,
+    .stats-strip,
+    .guest-actions {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .guest-meta {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin: 0.75rem 0;
+    }
+    .quick-actions,
+    .stats-strip {
+        margin: 0.9rem 0;
+    }
+    .quick-action,
+    .btn-icon-text {
+        align-items: center;
+        display: inline-flex;
+        font-weight: 600;
+        gap: 0.35rem;
+        justify-content: center;
+    }
+    .quick-action {
+        border-radius: 8px;
+        font-size: 0.85rem;
+        min-height: 42px;
+    }
+    .btn-icon-text {
+        font-size: 0.84rem;
+        min-height: 38px;
+    }
+    .stat-tile,
+    .filter-panel,
+    .guest-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+    }
+    .stat-tile {
+        min-height: 76px;
+        padding: 0.7rem;
+    }
+    .stat-label,
+    .meta-label {
+        color: #6c757d;
+        display: block;
+        line-height: 1.2;
+    }
+    .stat-label {
+        font-size: 0.72rem;
+        margin-bottom: 0.3rem;
+    }
+    .stat-value {
+        color: #212529;
+        font-size: 1.3rem;
+        font-weight: 700;
+    }
+    .filter-panel {
+        margin-bottom: 0.9rem;
+        padding: 0.75rem;
+        position: sticky;
+        top: 77px;
+        z-index: 15;
+    }
+    .filter-grid {
+        display: grid;
+        gap: 0.55rem;
+        grid-template-columns: 1fr 1fr;
+        margin-top: 0.55rem;
+    }
+    .guest-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+    .guest-card {
+        padding: 0.85rem;
+    }
+    .guest-name {
+        color: #212529;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.25;
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+    .guest-phone {
+        color: #6c757d;
+        font-size: 0.82rem;
+        margin-top: 0.25rem;
+        overflow-wrap: anywhere;
+    }
+    .meta-box {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 0.55rem;
+    }
+    .meta-label {
+        font-size: 0.7rem;
+        margin-bottom: 0.15rem;
+    }
+    .meta-value {
+        color: #212529;
+        font-weight: 700;
+    }
+    .empty-state {
+        background: #fff;
+        border: 1px dashed #ced4da;
+        border-radius: 8px;
+        color: #6c757d;
+        padding: 2rem 1rem;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mobile-hero">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+        <div>
+            <h1 class="mobile-title">Invitados</h1>
+            <p class="mobile-subtitle">{{ invitation.host_name }}</p>
+        </div>
+        <span class="badge text-bg-light border" id="visibleCount">0 visibles</span>
+    </div>
+</div>
+
+<main class="mobile-shell">
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" id="csrfToken">
+    <input type="file" id="excelFileInput" accept=".xlsx" class="d-none" onchange="uploadExcel(this)">
+
+    <div class="quick-actions">
+        <a href="/{{ invitation.slug }}/" target="_blank" class="btn btn-outline-secondary quick-action">
+            <i class="bi bi-box-arrow-up-right"></i><span>Ver</span>
+        </a>
+        <div class="dropdown">
+            <button class="btn btn-outline-success quick-action w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-file-earmark-excel"></i><span>Excel</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="/api/{{ invitation.slug }}/guests/excel-template/"><i class="bi bi-download"></i> Descargar plantilla</a></li>
+                <li><button class="dropdown-item" type="button" onclick="document.getElementById('excelFileInput').click();"><i class="bi bi-upload"></i> Subir lista</button></li>
+            </ul>
+        </div>
+        <button class="btn btn-primary quick-action" type="button" onclick="openGuestModal()">
+            <i class="bi bi-plus-lg"></i><span>Añadir</span>
+        </button>
+    </div>
+
+    <section class="stats-strip" aria-label="Resumen de invitados">
+        <div class="stat-tile">
+            <span class="stat-label">Total</span>
+            <span class="stat-value" id="stat-total">0</span>
+        </div>
+        <div class="stat-tile">
+            <span class="stat-label">Confirmaron</span>
+            <span class="stat-value" id="stat-attending">0</span>
+        </div>
+        <div class="stat-tile">
+            <span class="stat-label">Pases</span>
+            <span class="stat-value" id="stat-passes">0</span>
+        </div>
+    </section>
+
+    <section class="filter-panel" aria-label="Filtros">
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+            <input type="text" id="searchInput" class="form-control border-start-0 bg-light" placeholder="Buscar invitado o teléfono">
+        </div>
+        <div class="filter-grid">
+            <select id="statusFilter" class="form-select bg-light">
+                <option value="all">Todos</option>
+                <option value="confirmed">Confirmados</option>
+                <option value="pending">Por confirmar</option>
+                <option value="declined">No asistirá</option>
+            </select>
+            <select id="sheetFilter" class="form-select bg-light">
+                <option value="all">Todas las hojas</option>
+                <option value="manual">Registro manual</option>
+            </select>
+        </div>
+    </section>
+
+    <section class="guest-list" id="guestsList" aria-live="polite">
+        <div class="empty-state">Cargando invitados...</div>
+    </section>
+</main>
+
+<div class="modal fade" id="guestModal" tabindex="-1" aria-labelledby="guestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="guestModalLabel">Añadir Invitado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="guestForm">
+                    <input type="hidden" id="guestId">
+                    <div class="mb-3">
+                        <label for="guestName" class="form-label">Nombre del Invitado o Familia</label>
+                        <input type="text" class="form-control form-control-lg" id="guestName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="guestPhone" class="form-label">Teléfono (WhatsApp)</label>
+                        <input type="text" class="form-control form-control-lg" id="guestPhone" placeholder="Ej: 8342742331">
+                        <div class="form-text">Puede ser número local; se enviará con código de México.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="guestPasses" class="form-label">Número de Pases (Lugares)</label>
+                        <input type="number" class="form-control form-control-lg" id="guestPasses" min="1" value="2" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveGuest()" id="saveBtn">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const API_URL = '/api/{{ invitation.slug }}/guests/';
+    const guestModal = new bootstrap.Modal(document.getElementById('guestModal'));
+    let guestsData = [];
+    let currentFilterText = '';
+    let currentStatusFilter = 'all';
+    let currentSheetFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', loadGuests);
+
+    function getCsrfToken() {
+        return document.getElementById('csrfToken').value;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    function normalizeWhatsAppPhone(phoneNumber) {
+        let digits = String(phoneNumber || '').replace(/\D/g, '');
+        if (digits.length === 10) {
+            return `52${digits}`;
+        }
+        if (digits.length === 13 && digits.startsWith('521')) {
+            digits = `52${digits.slice(3)}`;
+        }
+        return digits;
+    }
+
+    async function loadGuests() {
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) throw new Error('Error cargando datos');
+            guestsData = await response.json();
+            populateSheetFilter();
+            renderGuests();
+            updateStats();
+        } catch (error) {
+            Swal.fire('Error', 'No se pudieron cargar los invitados.', 'error');
+        }
+    }
+
+    function populateSheetFilter() {
+        const sheetFilter = document.getElementById('sheetFilter');
+        const uniqueSheets = [...new Set(guestsData.map(g => g.sheet_name).filter(s => s))];
+
+        sheetFilter.innerHTML = `
+            <option value="all">Todas las hojas</option>
+            <option value="manual">Registro manual</option>
+        `;
+
+        uniqueSheets.forEach(sheet => {
+            const option = document.createElement('option');
+            option.value = sheet;
+            option.textContent = sheet;
+            sheetFilter.appendChild(option);
+        });
+
+        if (currentSheetFilter && (currentSheetFilter === 'all' || currentSheetFilter === 'manual' || uniqueSheets.includes(currentSheetFilter))) {
+            sheetFilter.value = currentSheetFilter;
+        } else {
+            currentSheetFilter = 'all';
+            sheetFilter.value = 'all';
+        }
+    }
+
+    function getFilteredGuests() {
+        return guestsData.filter(g => {
+            const name = String(g.name || '').toLowerCase();
+            const phone = String(g.phone_number || '');
+            const text = currentFilterText.toLowerCase();
+            const matchText = name.includes(text) || phone.includes(currentFilterText);
+
+            let matchStatus = true;
+            if (currentStatusFilter === 'confirmed') {
+                matchStatus = g.has_responded && g.is_attending;
+            } else if (currentStatusFilter === 'pending') {
+                matchStatus = !g.has_responded;
+            } else if (currentStatusFilter === 'declined') {
+                matchStatus = g.has_responded && !g.is_attending;
+            }
+
+            let matchSheet = true;
+            if (currentSheetFilter === 'manual') {
+                matchSheet = !g.sheet_name;
+            } else if (currentSheetFilter !== 'all') {
+                matchSheet = g.sheet_name === currentSheetFilter;
+            }
+
+            return matchText && matchStatus && matchSheet;
+        });
+    }
+
+    function renderGuests() {
+        const list = document.getElementById('guestsList');
+        const filtered = getFilteredGuests();
+        document.getElementById('visibleCount').innerText = `${filtered.length} visibles`;
+        list.innerHTML = '';
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div class="empty-state">No se encontraron invitados.</div>';
+            return;
+        }
+
+        filtered.forEach(g => {
+            const escapedName = escapeHtml(g.name);
+            const escapedPhone = escapeHtml(g.phone_number);
+            const escapedMaxCompanions = escapeHtml(g.max_companions);
+            let statusBadge = '<span class="badge bg-secondary">Sin respuesta</span>';
+            let confirmedCount = '<span class="text-muted">-</span>';
+
+            if (g.has_responded) {
+                if (g.is_attending) {
+                    statusBadge = '<span class="badge bg-success">Confirmado</span>';
+                    confirmedCount = `<span class="text-success">${escapeHtml(g.confirmed_companions)}</span>`;
+                } else {
+                    statusBadge = '<span class="badge bg-danger">No asistirá</span>';
+                    confirmedCount = '<span class="text-danger">0</span>';
+                }
+            }
+
+            const whatsappPhone = normalizeWhatsAppPhone(g.phone_number);
+            const domain = window.location.host;
+            const msg = `¡Hola ${g.name}! Te invito cordialmente a mi evento. 🥳\n\nEn el siguiente enlace puedes ver todos los detalles y confirmar tu asistencia:\n${window.location.protocol}//${domain}/${'{{ invitation.slug }}'}/?guest=${g.token}\n\n¡Te espero con mucha emoción!`;
+            const waLink = whatsappPhone
+                ? `<a href="https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}" target="_blank" class="btn btn-success btn-icon-text" title="Enviar WhatsApp"><i class="bi bi-whatsapp"></i><span>WhatsApp</span></a>`
+                : '<button class="btn btn-outline-secondary btn-icon-text" type="button" disabled><i class="bi bi-whatsapp"></i><span>WhatsApp</span></button>';
+
+            const card = `
+                <article class="guest-card">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <h2 class="guest-name">${escapedName}</h2>
+                            <div class="guest-phone">${g.phone_number ? escapedPhone : 'Sin teléfono'}</div>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <div class="guest-meta">
+                        <div class="meta-box">
+                            <span class="meta-label">Pases asignados</span>
+                            <span class="meta-value">${escapedMaxCompanions}</span>
+                        </div>
+                        <div class="meta-box">
+                            <span class="meta-label">Pases confirmados</span>
+                            <span class="meta-value">${confirmedCount}</span>
+                        </div>
+                    </div>
+                    <div class="guest-actions">
+                        ${waLink}
+                        <button class="btn btn-outline-primary btn-icon-text" onclick="editGuestById(${g.id})" title="Editar" type="button"><i class="bi bi-pencil"></i><span>Editar</span></button>
+                        <button class="btn btn-outline-danger btn-icon-text" onclick="deleteGuest(${g.id})" title="Eliminar" type="button"><i class="bi bi-trash"></i><span>Borrar</span></button>
+                    </div>
+                </article>
+            `;
+            list.insertAdjacentHTML('beforeend', card);
+        });
+    }
+
+    function updateStats() {
+        document.getElementById('stat-total').innerText = guestsData.length;
+        document.getElementById('stat-attending').innerText = guestsData.filter(g => g.has_responded && g.is_attending).length;
+        document.getElementById('stat-passes').innerText = guestsData.reduce((sum, g) => sum + g.max_companions, 0);
+    }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        currentFilterText = e.target.value;
+        renderGuests();
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', (e) => {
+        currentStatusFilter = e.target.value;
+        renderGuests();
+    });
+
+    document.getElementById('sheetFilter').addEventListener('change', (e) => {
+        currentSheetFilter = e.target.value;
+        renderGuests();
+    });
+
+    function openGuestModal() {
+        document.getElementById('guestForm').reset();
+        document.getElementById('guestId').value = '';
+        document.getElementById('guestModalLabel').innerText = 'Añadir Invitado';
+        guestModal.show();
+    }
+
+    function editGuestById(guestId) {
+        const guest = guestsData.find(g => String(g.id) === String(guestId));
+        if (!guest) {
+            Swal.fire('Error', 'No se encontró el invitado seleccionado.', 'error');
+            return;
+        }
+
+        document.getElementById('guestId').value = guest.id;
+        document.getElementById('guestName').value = guest.name;
+        document.getElementById('guestPhone').value = guest.phone_number || '';
+        document.getElementById('guestPasses').value = guest.max_companions;
+        document.getElementById('guestModalLabel').innerText = 'Editar Invitado';
+        guestModal.show();
+    }
+
+    async function saveGuest() {
+        const id = document.getElementById('guestId').value;
+        const name = document.getElementById('guestName').value;
+        const phone = document.getElementById('guestPhone').value;
+        const passes = document.getElementById('guestPasses').value;
+
+        if (!name || !passes) {
+            Swal.fire('Atención', 'Nombre y Pases son requeridos', 'warning');
+            return;
+        }
+
+        const data = {
+            name: name,
+            phone_number: phone,
+            max_companions: parseInt(passes)
+        };
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${API_URL}${id}/` : API_URL;
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) throw new Error('Error saving');
+
+            guestModal.hide();
+            Swal.fire({
+                icon: 'success',
+                title: 'Guardado',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            loadGuests();
+        } catch (error) {
+            Swal.fire('Error', 'Hubo un problema al guardar.', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function deleteGuest(id) {
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: 'Se eliminará al invitado y su respuesta (si la tiene).',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`${API_URL}${id}/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken()
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Error deleting');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Eliminado',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    loadGuests();
+                } catch(error) {
+                    Swal.fire('Error', 'No se pudo eliminar al invitado.', 'error');
+                }
+            }
+        });
+    }
+
+    async function uploadExcel(input) {
+        if (!input.files || input.files.length === 0) return;
+
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        Swal.fire({
+            title: 'Procesando...',
+            text: 'Subiendo e importando invitados, por favor espera.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        try {
+            const response = await fetch(`/api/{{ invitation.slug }}/guests/excel-upload/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                Swal.fire('¡Éxito!', result.message, 'success');
+                loadGuests();
+            } else {
+                Swal.fire('Error', result.message || 'Error al procesar el archivo.', 'error');
+            }
+        } catch (error) {
+            Swal.fire('Error', 'Hubo un problema de conexión al subir el archivo.', 'error');
+        } finally {
+            input.value = '';
+        }
+    }
+</script>
+{% endblock %}

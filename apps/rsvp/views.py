@@ -136,11 +136,36 @@ def check_invitation_access(view_func):
 
 # --- GUEST DASHBOARD ENDPOINTS ---
 
+def is_mobile_request(request):
+    user_agent = request.META.get('HTTP_USER_AGENT', '').lower()
+    if not user_agent:
+        return False
+
+    tablet_indicators = ('ipad', 'tablet')
+    if any(indicator in user_agent for indicator in tablet_indicators):
+        return False
+
+    if 'android' in user_agent and 'mobile' not in user_agent:
+        return False
+
+    mobile_indicators = (
+        'iphone',
+        'ipod',
+        'android',
+        'windows phone',
+        'blackberry',
+        'opera mini',
+        'iemobile',
+    )
+    return any(indicator in user_agent for indicator in mobile_indicators)
+
+
 @check_invitation_access
 @ensure_csrf_cookie
 def guest_dashboard(request, slug):
     invitation = get_object_or_404(Invitation, slug=slug)
-    return render(request, 'rsvp_guest_dashboard.html', {'invitation': invitation})
+    template_name = 'rsvp_mobile_guest_dashboard.html' if is_mobile_request(request) else 'rsvp_guest_dashboard.html'
+    return render(request, template_name, {'invitation': invitation})
 
 
 @check_invitation_access

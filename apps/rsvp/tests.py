@@ -40,6 +40,40 @@ class RsvpFlowTests(TestCase):
         response = self.client.get(reverse('invitations:dashboard', args=[self.invitation.slug]))
 
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'rsvp_guest_dashboard.html')
+
+    def test_phone_user_agent_opens_mobile_guest_dashboard(self):
+        self.client.login(username='manager', password='pass12345')
+
+        response = self.client.get(
+            reverse('invitations:dashboard', args=[self.invitation.slug]),
+            HTTP_USER_AGENT='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'rsvp_mobile_guest_dashboard.html')
+
+    def test_android_mobile_user_agent_opens_mobile_guest_dashboard(self):
+        self.client.login(username='manager', password='pass12345')
+
+        response = self.client.get(
+            reverse('invitations:dashboard', args=[self.invitation.slug]),
+            HTTP_USER_AGENT='Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'rsvp_mobile_guest_dashboard.html')
+
+    def test_tablet_user_agent_keeps_desktop_guest_dashboard(self):
+        self.client.login(username='manager', password='pass12345')
+
+        response = self.client.get(
+            reverse('invitations:dashboard', args=[self.invitation.slug]),
+            HTTP_USER_AGENT='Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'rsvp_guest_dashboard.html')
 
     def test_non_administrator_cannot_open_guest_dashboard(self):
         self.client.login(username='other', password='pass12345')
