@@ -1,167 +1,274 @@
 {% extends 'dashboard/base.html' %}
 
-{% block title %}Gestor de Invitados - {{ invitation.host_name }}{% endblock %}
+{% block title %}Invitados - {{ invitation.host_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #f6f7fb;
+    }
+    .navbar .container {
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
+    }
+    .navbar-brand {
+        font-size: 0.95rem;
+    }
+    .navbar .me-3 {
+        display: none;
+    }
+    .mobile-hero {
+        background: #fff;
+        border-bottom: 1px solid #e9ecef;
+        padding: 1rem 0.9rem;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+    }
+    .mobile-shell {
+        padding: 0 0.9rem 6rem;
+    }
+    .mobile-title {
+        color: #212529;
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    .mobile-subtitle {
+        color: #6c757d;
+        font-size: 0.85rem;
+        margin: 0.1rem 0 0;
+    }
+    .quick-actions,
+    .stats-strip,
+    .guest-meta,
+    .guest-actions {
+        display: grid;
+        gap: 0.55rem;
+    }
+    .quick-actions,
+    .stats-strip,
+    .guest-actions {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .guest-meta {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin: 0.75rem 0;
+    }
+    .quick-actions,
+    .stats-strip {
+        margin: 0.9rem 0;
+    }
+    .quick-action,
+    .btn-icon-text {
+        align-items: center;
+        display: inline-flex;
+        font-weight: 600;
+        gap: 0.35rem;
+        justify-content: center;
+    }
+    .quick-action {
+        border-radius: 8px;
+        font-size: 0.85rem;
+        min-height: 42px;
+    }
+    .btn-icon-text {
+        font-size: 0.84rem;
+        min-height: 38px;
+    }
+    .stat-tile,
+    .filter-panel,
+    .guest-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+    }
+    .stat-tile {
+        min-height: 76px;
+        padding: 0.7rem;
+    }
+    .stat-label,
+    .meta-label {
+        color: #6c757d;
+        display: block;
+        line-height: 1.2;
+    }
+    .stat-label {
+        font-size: 0.72rem;
+        margin-bottom: 0.3rem;
+    }
+    .stat-value {
+        color: #212529;
+        font-size: 1.3rem;
+        font-weight: 700;
+    }
+    .filter-panel {
+        margin-bottom: 0.9rem;
+        padding: 0.75rem;
+        position: sticky;
+        top: 77px;
+        z-index: 15;
+    }
+    .filter-grid {
+        display: grid;
+        gap: 0.55rem;
+        grid-template-columns: 1fr;
+        margin-top: 0.55rem;
+    }
+    .guest-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+    .guest-card {
+        padding: 0.85rem;
+    }
+    .guest-name {
+        color: #212529;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.25;
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+    .guest-phone {
+        color: #6c757d;
+        font-size: 0.82rem;
+        margin-top: 0.25rem;
+        overflow-wrap: anywhere;
+    }
+    .meta-box {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 0.55rem;
+    }
+    .meta-label {
+        font-size: 0.7rem;
+        margin-bottom: 0.15rem;
+    }
+    .meta-value {
+        color: #212529;
+        font-weight: 700;
+    }
+    .empty-state {
+        background: #fff;
+        border: 1px dashed #ced4da;
+        border-radius: 8px;
+        color: #6c757d;
+        padding: 2rem 1rem;
+        text-align: center;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="dashboard-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="h3 mb-1 text-dark">Gestor de Invitados</h1>
-                <p class="text-muted mb-0">Administrando: <strong>{{ invitation.host_name }}</strong></p>
-            </div>
-            <div class="col-md-4 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-2">
-                <a href="/{{ invitation.slug }}/" target="_blank" class="btn btn-outline-secondary">
-                    <i class="bi bi-box-arrow-up-right"></i> Ver
-                </a>
-                
-                <!-- Botón Dropdown para Importación -->
-                <div class="dropdown">
-                    <button class="btn btn-outline-success dropdown-toggle" type="button" id="dropdownExcel" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-file-earmark-excel"></i> Excel
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownExcel">
-                        <li><a class="dropdown-item" href="/api/{{ invitation.slug }}/guests/excel-template/"><i class="bi bi-download"></i> 1. Descargar Plantilla</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" onclick="document.getElementById('excelFileInput').click();"><i class="bi bi-upload"></i> 2. Subir Lista</a></li>
-                    </ul>
-                </div>
-                
-                <input type="file" id="excelFileInput" accept=".xlsx" style="display: none;" onchange="uploadExcel(this)">
-                
-                <button class="btn btn-primary" onclick="openGuestModal()">
-                    <i class="bi bi-plus-lg"></i> Añadir
-                </button>
-            </div>
+<div class="mobile-hero">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+        <div>
+            <h1 class="mobile-title">Invitados</h1>
+            <p class="mobile-subtitle">{{ invitation.host_name }}</p>
         </div>
+        <span class="badge text-bg-light border" id="visibleCount">0 visibles</span>
     </div>
 </div>
 
-<div class="container pb-5">
+<main class="mobile-shell">
     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" id="csrfToken">
+    <input type="file" id="excelFileInput" accept=".xlsx" class="d-none" onchange="uploadExcel(this)">
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-4 mb-3">
-            <div class="card bg-primary text-white h-100">
-                <div class="card-body">
-                    <h6 class="card-title text-white-50">Total Invitados</h6>
-                    <h2 class="mb-0" id="stat-total">0</h2>
-                </div>
-            </div>
+    <div class="quick-actions">
+        <a href="/{{ invitation.slug }}/" target="_blank" class="btn btn-outline-secondary quick-action">
+            <i class="bi bi-box-arrow-up-right"></i><span>Ver</span>
+        </a>
+        <div class="dropdown">
+            <button class="btn btn-outline-success quick-action w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-file-earmark-excel"></i><span>Excel</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="/api/{{ invitation.slug }}/guests/excel-template/"><i class="bi bi-download"></i> Descargar plantilla</a></li>
+                <li><button class="dropdown-item" type="button" onclick="document.getElementById('excelFileInput').click();"><i class="bi bi-upload"></i> Subir lista</button></li>
+            </ul>
         </div>
-        <div class="col-md-4 mb-3">
-            <div class="card bg-success text-white h-100">
-                <div class="card-body">
-                    <h6 class="card-title text-white-50">Confirmaron Asistencia</h6>
-                    <h2 class="mb-0" id="stat-attending">0</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-3">
-            <div class="card bg-info text-white h-100">
-                <div class="card-body">
-                    <h6 class="card-title text-white-50">Pases (Lugares) Asignados</h6>
-                    <h2 class="mb-0" id="stat-passes">0</h2>
-                </div>
-            </div>
-        </div>
+        <button class="btn btn-primary quick-action" type="button" onclick="openGuestModal()">
+            <i class="bi bi-plus-lg"></i><span>Añadir</span>
+        </button>
     </div>
 
-    <!-- Main Table -->
-    <div class="card">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 flex-wrap gap-3">
-            <h5 class="mb-0 text-secondary fw-bold">Lista de Invitados</h5>
-            <div class="d-flex gap-2 flex-wrap align-items-center">
-                <div class="input-group" style="width: auto;">
-                    <span class="input-group-text bg-light border-0 text-muted"><i class="bi bi-funnel"></i></span>
-                    <select id="statusFilter" class="form-select bg-light border-0" style="min-width: 160px; font-size: 0.9rem;">
-                        <option value="all">Todos los estados</option>
-                        <option value="confirmed">Confirmados</option>
-                        <option value="pending">Por confirmar</option>
-                        <option value="declined">No asistirá</option>
-                    </select>
-                </div>
-                <div class="input-group" style="width: auto;">
-                    <span class="input-group-text bg-light border-0 text-muted"><i class="bi bi-file-earmark-spreadsheet"></i></span>
-                    <select id="sheetFilter" class="form-select bg-light border-0" style="min-width: 160px; font-size: 0.9rem;">
-                        <option value="all">Todas las hojas</option>
-                        <option value="manual">Registro manual</option>
-                    </select>
-                </div>
-                <div class="input-group" style="width: auto;">
-                    <span class="input-group-text bg-light border-0 text-muted"><i class="bi bi-whatsapp"></i></span>
-                    <select id="whatsappFilter" class="form-select bg-light border-0" style="min-width: 170px; font-size: 0.9rem;">
-                        <option value="all">Todos WhatsApp</option>
-                        <option value="sent">WhatsApp enviados</option>
-                        <option value="pending">WhatsApp pendientes</option>
-                    </select>
-                </div>
-                <div class="input-group" style="max-width: 250px;">
-                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                    <input type="text" id="searchInput" class="form-control border-start-0 bg-light" placeholder="Buscar..." style="font-size: 0.9rem;">
-                </div>
-            </div>
+    <section class="stats-strip" aria-label="Resumen de invitados">
+        <div class="stat-tile">
+            <span class="stat-label">Total</span>
+            <span class="stat-value" id="stat-total">0</span>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="guestsTable">
-                <thead class="table-light text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.5px;">
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Alias</th>
-                        <th>Teléfono</th>
-                        <th class="text-center">Pases Asignados</th>
-                        <th class="text-center">Pases Confirmados</th>
-                        <th class="text-center">Estado</th>
-                        <th class="text-center">WhatsApp</th>
-                        <th class="text-end">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="guestsTableBody">
-                    <tr>
-                        <td colspan="8" class="text-center py-4 text-muted">Cargando invitados...</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="stat-tile">
+            <span class="stat-label">Confirmaron</span>
+            <span class="stat-value" id="stat-attending">0</span>
         </div>
-    </div>
-</div>
+        <div class="stat-tile">
+            <span class="stat-label">Pases</span>
+            <span class="stat-value" id="stat-passes">0</span>
+        </div>
+    </section>
 
-<!-- Guest Modal -->
+    <section class="filter-panel" aria-label="Filtros">
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+            <input type="text" id="searchInput" class="form-control border-start-0 bg-light" placeholder="Buscar invitado o teléfono">
+        </div>
+        <div class="filter-grid">
+            <select id="statusFilter" class="form-select bg-light">
+                <option value="all">Todos</option>
+                <option value="confirmed">Confirmados</option>
+                <option value="pending">Por confirmar</option>
+                <option value="declined">No asistirá</option>
+            </select>
+            <select id="sheetFilter" class="form-select bg-light">
+                <option value="all">Todas las hojas</option>
+                <option value="manual">Registro manual</option>
+            </select>
+            <select id="whatsappFilter" class="form-select bg-light">
+                <option value="all">Todos WhatsApp</option>
+                <option value="sent">WhatsApp enviados</option>
+                <option value="pending">WhatsApp pendientes</option>
+            </select>
+        </div>
+    </section>
+
+    <section class="guest-list" id="guestsList" aria-live="polite">
+        <div class="empty-state">Cargando invitados...</div>
+    </section>
+</main>
+
 <div class="modal fade" id="guestModal" tabindex="-1" aria-labelledby="guestModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="guestModalLabel">Añadir Invitado</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
                 <form id="guestForm">
                     <input type="hidden" id="guestId">
                     <div class="mb-3">
                         <label for="guestName" class="form-label">Nombre del Invitado o Familia</label>
-                        <input type="text" class="form-control" id="guestName" required>
+                        <input type="text" class="form-control form-control-lg" id="guestName" required>
                     </div>
                     <div class="mb-3">
                         <label for="guestAlias" class="form-label">Alias</label>
-                        <input type="text" class="form-control" id="guestAlias" placeholder="Ej: Tía Mary">
+                        <input type="text" class="form-control form-control-lg" id="guestAlias" placeholder="Ej: Tía Mary">
                     </div>
                     <div class="mb-3">
                         <label for="guestPhone" class="form-label">Teléfono (WhatsApp)</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="guestPhone" placeholder="Ej: 5215512345678">
-                        </div>
-                        <div class="form-text">Incluye el código de país. Ej: 52 para México.</div>
+                        <input type="text" class="form-control form-control-lg" id="guestPhone" placeholder="Ej: 8342742331">
+                        <div class="form-text">Puede ser número local; se enviará con código de México.</div>
                     </div>
                     <div class="mb-3">
                         <label for="guestPasses" class="form-label">Número de Pases (Lugares)</label>
-                        <input type="number" class="form-control" id="guestPasses" min="1" value="2" required>
+                        <input type="number" class="form-control form-control-lg" id="guestPasses" min="1" value="2" required>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="saveGuest()" id="saveBtn">Guardar Invitado</button>
+                <button type="button" class="btn btn-primary" onclick="saveGuest()" id="saveBtn">Guardar</button>
             </div>
         </div>
     </div>
@@ -173,8 +280,11 @@
     const API_URL = '/api/{{ invitation.slug }}/guests/';
     const guestModal = new bootstrap.Modal(document.getElementById('guestModal'));
     let guestsData = [];
+    let currentFilterText = '';
+    let currentStatusFilter = 'all';
+    let currentSheetFilter = 'all';
+    let currentWhatsAppFilter = 'all';
 
-    // Load guests on start
     document.addEventListener('DOMContentLoaded', loadGuests);
 
     function getCsrfToken() {
@@ -207,11 +317,8 @@
             const response = await fetch(API_URL);
             if (!response.ok) throw new Error('Error cargando datos');
             guestsData = await response.json();
-            
-            // Popular select de hojas dinámicamente
             populateSheetFilter();
-            
-            renderTable();
+            renderGuests();
             updateStats();
         } catch (error) {
             Swal.fire('Error', 'No se pudieron cargar los invitados.', 'error');
@@ -232,7 +339,7 @@
             const guest = guestsData.find(g => String(g.id) === String(guestId));
             if (guest) {
                 guest.whatsapp_sent = true;
-                renderTable();
+                renderGuests();
             }
         } catch (error) {
             Swal.fire('Atención', 'Se abrió WhatsApp, pero no se pudo marcar como enviado.', 'warning');
@@ -241,23 +348,20 @@
 
     function populateSheetFilter() {
         const sheetFilter = document.getElementById('sheetFilter');
-        // Obtener valores únicos que no sean nulos/vacíos
         const uniqueSheets = [...new Set(guestsData.map(g => g.sheet_name).filter(s => s))];
-        
-        // Mantener las 2 primeras opciones por defecto
+
         sheetFilter.innerHTML = `
             <option value="all">Todas las hojas</option>
             <option value="manual">Registro manual</option>
         `;
-        
+
         uniqueSheets.forEach(sheet => {
             const option = document.createElement('option');
             option.value = sheet;
             option.textContent = sheet;
             sheetFilter.appendChild(option);
         });
-        
-        // Restaurar valor previo si aún es válido
+
         if (currentSheetFilter && (currentSheetFilter === 'all' || currentSheetFilter === 'manual' || uniqueSheets.includes(currentSheetFilter))) {
             sheetFilter.value = currentSheetFilter;
         } else {
@@ -266,20 +370,14 @@
         }
     }
 
-    let currentFilterText = '';
-    let currentStatusFilter = 'all';
-    let currentSheetFilter = 'all';
-    let currentWhatsAppFilter = 'all';
+    function getFilteredGuests() {
+        return guestsData.filter(g => {
+            const name = String(g.name || '').toLowerCase();
+            const alias = String(g.alias || '').toLowerCase();
+            const phone = String(g.phone_number || '');
+            const text = currentFilterText.toLowerCase();
+            const matchText = name.includes(text) || alias.includes(text) || phone.includes(currentFilterText);
 
-    function renderTable() {
-        const tbody = document.getElementById('guestsTableBody');
-        tbody.innerHTML = '';
-        
-        const filtered = guestsData.filter(g => {
-            const matchText = g.name.toLowerCase().includes(currentFilterText.toLowerCase()) || 
-                              (g.alias && g.alias.toLowerCase().includes(currentFilterText.toLowerCase())) ||
-                              (g.phone_number && g.phone_number.includes(currentFilterText));
-                              
             let matchStatus = true;
             if (currentStatusFilter === 'confirmed') {
                 matchStatus = g.has_responded && g.is_attending;
@@ -288,7 +386,7 @@
             } else if (currentStatusFilter === 'declined') {
                 matchStatus = g.has_responded && !g.is_attending;
             }
-            
+
             let matchSheet = true;
             if (currentSheetFilter === 'manual') {
                 matchSheet = !g.sheet_name;
@@ -302,12 +400,19 @@
             } else if (currentWhatsAppFilter === 'pending') {
                 matchWhatsApp = !g.whatsapp_sent;
             }
-            
+
             return matchText && matchStatus && matchSheet && matchWhatsApp;
         });
+    }
+
+    function renderGuests() {
+        const list = document.getElementById('guestsList');
+        const filtered = getFilteredGuests();
+        document.getElementById('visibleCount').innerText = `${filtered.length} visibles`;
+        list.innerHTML = '';
 
         if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">No se encontraron invitados.</td></tr>`;
+            list.innerHTML = '<div class="empty-state">No se encontraron invitados.</div>';
             return;
         }
 
@@ -318,11 +423,11 @@
             const escapedMaxCompanions = escapeHtml(g.max_companions);
             let statusBadge = '<span class="badge bg-secondary">Sin respuesta</span>';
             let confirmedCount = '<span class="text-muted">-</span>';
-            
+
             if (g.has_responded) {
                 if (g.is_attending) {
                     statusBadge = '<span class="badge bg-success">Confirmado</span>';
-                    confirmedCount = `<strong class="text-success">${g.confirmed_companions}</strong>`;
+                    confirmedCount = `<span class="text-success">${escapeHtml(g.confirmed_companions)}</span>`;
                 } else {
                     statusBadge = '<span class="badge bg-danger">No asistirá</span>';
                     confirmedCount = '<span class="text-danger">0</span>';
@@ -330,35 +435,47 @@
             }
 
             const whatsappStatusBadge = g.whatsapp_sent
-                ? '<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle"></i> Enviado</span>'
-                : '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-clock"></i> Pendiente</span>';
+                ? '<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle"></i> WhatsApp enviado</span>'
+                : '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-clock"></i> WhatsApp pendiente</span>';
 
-            // Generate WA Link locally matching what we did in admin
-            let waLink = '';
             const whatsappPhone = normalizeWhatsAppPhone(g.phone_number);
-            if (whatsappPhone) {
-                const domain = window.location.host; // Use current host
-                const msg = `¡Hola ${g.name}! Te invito cordialmente a mi evento. 🥳\n\nEn el siguiente enlace puedes ver todos los detalles y confirmar tu asistencia:\n${window.location.protocol}//${domain}/${'{{ invitation.slug }}'}/?guest=${g.token}\n\n¡Te espero con mucha emoción!`;
-                waLink = `<a href="https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}" target="_blank" class="btn btn-sm btn-success me-1" title="Enviar WhatsApp" onclick="markWhatsAppSent(${g.id})"><i class="bi bi-whatsapp"></i></a>`;
-            }
+            const domain = window.location.host;
+            const msg = `¡Hola ${g.name}! Te invito cordialmente a mi evento. 🥳\n\nEn el siguiente enlace puedes ver todos los detalles y confirmar tu asistencia:\n${window.location.protocol}//${domain}/${'{{ invitation.slug }}'}/?guest=${g.token}\n\n¡Te espero con mucha emoción!`;
+            const waLink = whatsappPhone
+                ? `<a href="https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}" target="_blank" class="btn btn-success btn-icon-text" title="Enviar WhatsApp" onclick="markWhatsAppSent(${g.id})"><i class="bi bi-whatsapp"></i><span>WhatsApp</span></a>`
+                : '<button class="btn btn-outline-secondary btn-icon-text" type="button" disabled><i class="bi bi-whatsapp"></i><span>WhatsApp</span></button>';
 
-            const row = `
-                <tr>
-                    <td><strong>${escapedName}</strong></td>
-                    <td>${g.alias ? escapedAlias : '<span class="text-muted">-</span>'}</td>
-                    <td>${g.phone_number ? escapedPhone : '<span class="text-muted">-</span>'}</td>
-                    <td class="text-center">${escapedMaxCompanions}</td>
-                    <td class="text-center">${confirmedCount}</td>
-                    <td class="text-center">${statusBadge}</td>
-                    <td class="text-center">${whatsappStatusBadge}</td>
-                    <td class="text-end">
+            const card = `
+                <article class="guest-card">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <h2 class="guest-name">${escapedName}</h2>
+                            ${g.alias ? `<div class="guest-phone">Alias: ${escapedAlias}</div>` : ''}
+                            <div class="guest-phone">${g.phone_number ? escapedPhone : 'Sin teléfono'}</div>
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-1">
+                            ${statusBadge}
+                            ${whatsappStatusBadge}
+                        </div>
+                    </div>
+                    <div class="guest-meta">
+                        <div class="meta-box">
+                            <span class="meta-label">Pases asignados</span>
+                            <span class="meta-value">${escapedMaxCompanions}</span>
+                        </div>
+                        <div class="meta-box">
+                            <span class="meta-label">Pases confirmados</span>
+                            <span class="meta-value">${confirmedCount}</span>
+                        </div>
+                    </div>
+                    <div class="guest-actions">
                         ${waLink}
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editGuestById(${g.id})" title="Editar"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteGuest(${g.id})" title="Eliminar"><i class="bi bi-trash"></i></button>
-                    </td>
-                </tr>
+                        <button class="btn btn-outline-primary btn-icon-text" onclick="editGuestById(${g.id})" title="Editar" type="button"><i class="bi bi-pencil"></i><span>Editar</span></button>
+                        <button class="btn btn-outline-danger btn-icon-text" onclick="deleteGuest(${g.id})" title="Eliminar" type="button"><i class="bi bi-trash"></i><span>Borrar</span></button>
+                    </div>
+                </article>
             `;
-            tbody.insertAdjacentHTML('beforeend', row);
+            list.insertAdjacentHTML('beforeend', card);
         });
     }
 
@@ -368,27 +485,24 @@
         document.getElementById('stat-passes').innerText = guestsData.reduce((sum, g) => sum + g.max_companions, 0);
     }
 
-    // Search filter
     document.getElementById('searchInput').addEventListener('input', (e) => {
         currentFilterText = e.target.value;
-        renderTable();
+        renderGuests();
     });
 
-    // Status filter
     document.getElementById('statusFilter').addEventListener('change', (e) => {
         currentStatusFilter = e.target.value;
-        renderTable();
+        renderGuests();
     });
 
-    // Sheet filter
     document.getElementById('sheetFilter').addEventListener('change', (e) => {
         currentSheetFilter = e.target.value;
-        renderTable();
+        renderGuests();
     });
 
     document.getElementById('whatsappFilter').addEventListener('change', (e) => {
         currentWhatsAppFilter = e.target.value;
-        renderTable();
+        renderGuests();
     });
 
     function openGuestModal() {
@@ -435,7 +549,6 @@
 
         const method = id ? 'PUT' : 'POST';
         const url = id ? `${API_URL}${id}/` : API_URL;
-        
         const btn = document.getElementById('saveBtn');
         btn.disabled = true;
 
@@ -471,7 +584,7 @@
     function deleteGuest(id) {
         Swal.fire({
             title: '¿Estás seguro?',
-            text: "Se eliminará al invitado y su respuesta (si la tiene).",
+            text: 'Se eliminará al invitado y su respuesta (si la tiene).',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc3545',
@@ -487,9 +600,9 @@
                             'X-CSRFToken': getCsrfToken()
                         }
                     });
-                    
+
                     if (!response.ok) throw new Error('Error deleting');
-                    
+
                     Swal.fire({
                         icon: 'success',
                         title: 'Eliminado',
@@ -505,14 +618,14 @@
             }
         });
     }
+
     async function uploadExcel(input) {
         if (!input.files || input.files.length === 0) return;
-        
+
         const file = input.files[0];
         const formData = new FormData();
         formData.append('file', file);
-        
-        // Mostrar Loading
+
         Swal.fire({
             title: 'Procesando...',
             text: 'Subiendo e importando invitados, por favor espera.',
@@ -521,7 +634,7 @@
                 Swal.showLoading();
             }
         });
-        
+
         try {
             const response = await fetch(`/api/{{ invitation.slug }}/guests/excel-upload/`, {
                 method: 'POST',
@@ -530,9 +643,9 @@
                 },
                 body: formData
             });
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 Swal.fire('¡Éxito!', result.message, 'success');
                 loadGuests();
@@ -542,7 +655,7 @@
         } catch (error) {
             Swal.fire('Error', 'Hubo un problema de conexión al subir el archivo.', 'error');
         } finally {
-            input.value = ''; // Reset input
+            input.value = '';
         }
     }
 </script>

@@ -136,11 +136,36 @@ def check_invitation_access(view_func):
 
 # --- GUEST DASHBOARD ENDPOINTS ---
 
+def is_mobile_request(request):
+    user_agent = request.META.get('HTTP_USER_AGENT', '').lower()
+    if not user_agent:
+        return False
+
+    tablet_indicators = ('ipad', 'tablet')
+    if any(indicator in user_agent for indicator in tablet_indicators):
+        return False
+
+    if 'android' in user_agent and 'mobile' not in user_agent:
+        return False
+
+    mobile_indicators = (
+        'iphone',
+        'ipod',
+        'android',
+        'windows phone',
+        'blackberry',
+        'opera mini',
+        'iemobile',
+    )
+    return any(indicator in user_agent for indicator in mobile_indicators)
+
+
 @check_invitation_access
 @ensure_csrf_cookie
 def guest_dashboard(request, slug):
     invitation = get_object_or_404(Invitation, slug=slug)
-    return render(request, 'rsvp_guest_dashboard.html', {'invitation': invitation})
+    template_name = 'rsvp_mobile_guest_dashboard.html' if is_mobile_request(request) else 'rsvp_guest_dashboard.html'
+    return render(request, template_name, {'invitation': invitation})
 
 
 @check_invitation_access
@@ -153,6 +178,7 @@ def api_guests_list_create(request, slug):
         data = [{
             'id': g.id,
             'name': g.name,
+            'alias': g.alias,
             'phone_number': g.phone_number,
             'max_companions': g.max_companions,
             'has_responded': g.has_responded,
@@ -170,6 +196,7 @@ def api_guests_list_create(request, slug):
             guest = Guest.objects.create(
                 invitation=invitation,
                 name=body.get('name'),
+                alias=body.get('alias', ''),
                 phone_number=body.get('phone_number', ''),
                 max_companions=int(body.get('max_companions', 1))
             )
@@ -188,6 +215,7 @@ def api_guest_detail(request, slug, guest_id):
         try:
             body = json.loads(request.body)
             guest.name = body.get('name', guest.name)
+            guest.alias = body.get('alias', guest.alias)
             guest.phone_number = body.get('phone_number', guest.phone_number)
             guest.max_companions = int(body.get('max_companions', guest.max_companions))
             guest.save()
@@ -221,7 +249,7 @@ def api_download_excel_template(request, slug):
     ws.title = "Invitados"
     
     # Headers
-    headers = ["Nombre del Invitado o Familia", "Teléfono (WhatsApp)", "Número de Pases (Lugares)"]
+    headers = ["Nombre del Invitado o Familia", "Alias", "Teléfono (WhatsApp)", "Número de Pases (Lugares)"]
     ws.append(headers)
     
     # Styling headers
@@ -238,9 +266,10 @@ def api_download_excel_template(request, slug):
     ws.column_dimensions['A'].width = 40
     ws.column_dimensions['B'].width = 25
     ws.column_dimensions['C'].width = 25
+    ws.column_dimensions['D'].width = 25
     
     # Add an example row
-    ws.append(["Familia Ejemplo", "5215512345678", 4])
+    ws.append(["Familia Ejemplo", "Tíos de Monterrey", "5215512345678", 4])
     
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="Plantilla_Invitados.xlsx"'
@@ -273,16 +302,22 @@ def api_upload_excel_guests(request, slug):
         with transaction.atomic():
             for sheet_name in wb.sheetnames:
                 ws = wb[sheet_name]
+                header_values = [str(cell.value or '').strip().lower() for cell in ws[1]]
+                has_alias_column = len(header_values) > 1 and 'alias' in header_values[1]
                 for row in ws.iter_rows(min_row=2, values_only=True):
                     if not row or not row[0]:
                         continue  # Skip empty rows or rows without name
                         
                     name = str(row[0]).strip()
+                    alias = ""
+                    if has_alias_column and len(row) > 1 and row[1] is not None:
+                        alias = str(row[1]).strip()
                     
                     # Parse phone carefully to remove decimal points if stored as numeric float in Excel
                     phone = ""
-                    if row[1] is not None:
-                        val = row[1]
+                    phone_index = 2 if has_alias_column else 1
+                    if len(row) > phone_index and row[phone_index] is not None:
+                        val = row[phone_index]
                         if isinstance(val, float):
                             phone = str(int(val)) if val.is_integer() else str(val)
                         elif isinstance(val, int):
@@ -293,9 +328,10 @@ def api_upload_excel_guests(request, slug):
                                 phone = phone[:-2]
                     
                     # Try to parse passes
+                    passes_index = 3 if has_alias_column else 2
                     try:
-                        passes = int(row[2])
-                    except (ValueError, TypeError):
+                        passes = int(row[passes_index])
+                    except (IndexError, ValueError, TypeError):
                         passes = 1  # Default to 1 pass if invalid
                         
                     if not name:
@@ -311,6 +347,7 @@ def api_upload_excel_guests(request, slug):
                     if guest:
                         # Update existing guest
                         guest.name = name
+                        guest.alias = alias
                         if phone:
                             guest.phone_number = phone
                         guest.max_companions = passes
@@ -323,6 +360,7 @@ def api_upload_excel_guests(request, slug):
                         Guest.objects.create(
                             invitation=invitation,
                             name=name,
+                            alias=alias,
                             phone_number=phone,
                             max_companions=passes,
                             sheet_name=sheet_name,

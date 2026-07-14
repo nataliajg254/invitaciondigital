@@ -6,6 +6,7 @@ from invitations.models import Invitation
 class Guest(models.Model):
     invitation = models.ForeignKey(Invitation, related_name='guests', on_delete=models.CASCADE)
     name = models.CharField(max_length=150, verbose_name="Nombre del Invitado/Familia")
+    alias = models.CharField(max_length=100, blank=True, null=True, verbose_name="Alias")
     phone_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono (WhatsApp)")
     max_companions = models.PositiveIntegerField(default=0, verbose_name="Pases Asignados", help_text="Total de personas permitidas para esta familia/invitado.")
     

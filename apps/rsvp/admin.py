@@ -19,9 +19,9 @@ def normalize_whatsapp_phone(phone_number):
 
 @admin.register(Guest)
 class GuestAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone_number', 'max_companions', 'whatsapp_sent', 'is_attending', 'has_responded', 'whatsapp_link', 'pdf_link')
+    list_display = ('name', 'alias', 'phone_number', 'max_companions', 'whatsapp_sent', 'is_attending', 'has_responded', 'whatsapp_link', 'pdf_link')
     list_filter = ('whatsapp_sent', 'has_responded', 'is_attending', 'is_public_rsvp', 'invitation')
-    search_fields = ('name', 'phone_number')
+    search_fields = ('name', 'alias', 'phone_number')
     readonly_fields = ('token', 'has_responded', 'is_attending', 'confirmed_companions', 'dietary_restrictions', 'created_at', 'is_public_rsvp')
 
     def get_urls(self):
@@ -75,7 +75,7 @@ class GuestAdmin(admin.ModelAdmin):
     def get_fieldsets(self, request, obj=None):
         return (
             ('Información Principal', {
-                'fields': ('invitation', 'name', 'phone_number', 'max_companions')
+                'fields': ('invitation', 'name', 'alias', 'phone_number', 'max_companions')
             }),
             ('Opciones Avanzadas', {
                 'fields': ('rsvp_deadline', 'is_public_rsvp', 'token'),

@@ -30,6 +30,7 @@ class RsvpFlowTests(TestCase):
         self.guest = Guest.objects.create(
             invitation=self.invitation,
             name='Familia Perez',
+            alias='Los Perez',
             phone_number='5215512345678',
             max_companions=4,
         )
@@ -40,6 +41,40 @@ class RsvpFlowTests(TestCase):
         response = self.client.get(reverse('invitations:dashboard', args=[self.invitation.slug]))
 
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'rsvp_guest_dashboard.html')
+
+    def test_phone_user_agent_opens_mobile_guest_dashboard(self):
+        self.client.login(username='manager', password='pass12345')
+
+        response = self.client.get(
+            reverse('invitations:dashboard', args=[self.invitation.slug]),
+            HTTP_USER_AGENT='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'rsvp_mobile_guest_dashboard.html')
+
+    def test_android_mobile_user_agent_opens_mobile_guest_dashboard(self):
+        self.client.login(username='manager', password='pass12345')
+
+        response = self.client.get(
+            reverse('invitations:dashboard', args=[self.invitation.slug]),
+            HTTP_USER_AGENT='Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'rsvp_mobile_guest_dashboard.html')
+
+    def test_tablet_user_agent_keeps_desktop_guest_dashboard(self):
+        self.client.login(username='manager', password='pass12345')
+
+        response = self.client.get(
+            reverse('invitations:dashboard', args=[self.invitation.slug]),
+            HTTP_USER_AGENT='Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'rsvp_guest_dashboard.html')
 
     def test_non_administrator_cannot_open_guest_dashboard(self):
         self.client.login(username='other', password='pass12345')
@@ -96,6 +131,36 @@ class RsvpFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()[0]['whatsapp_sent'])
+
+    def test_guests_api_includes_alias(self):
+        self.client.login(username='manager', password='pass12345')
+
+        response = self.client.get(reverse('invitations:api_guests_list_create', args=[self.invitation.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()[0]['alias'], 'Los Perez')
+
+    def test_guest_api_can_create_and_update_alias(self):
+        self.client.login(username='manager', password='pass12345')
+
+        create_response = self.client.post(
+            reverse('invitations:api_guests_list_create', args=[self.invitation.slug]),
+            data='{"name": "Familia Lopez", "alias": "Lupita", "phone_number": "8341112233", "max_companions": 2}',
+            content_type='application/json',
+        )
+        guest_id = create_response.json()['id']
+
+        self.assertEqual(create_response.status_code, 201)
+        self.assertEqual(Guest.objects.get(pk=guest_id).alias, 'Lupita')
+
+        update_response = self.client.put(
+            reverse('invitations:api_guest_detail', args=[self.invitation.slug, guest_id]),
+            data='{"name": "Familia Lopez", "alias": "Los Lopez", "phone_number": "8341112233", "max_companions": 3}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        self.assertEqual(Guest.objects.get(pk=guest_id).alias, 'Los Lopez')
 
     def test_guest_whatsapp_sent_endpoint_marks_guest_as_sent(self):
         self.client.login(username='manager', password='pass12345')
