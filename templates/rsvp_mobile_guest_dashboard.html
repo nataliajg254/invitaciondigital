@@ -243,6 +243,11 @@
                 <option value="sent">WhatsApp enviados</option>
                 <option value="pending">WhatsApp pendientes</option>
             </select>
+            <select id="visitFilter" class="form-select bg-light">
+                <option value="all">Todas las visitas</option>
+                <option value="visited">Ya visualizaron</option>
+                <option value="not_visited">Sin visualizar</option>
+            </select>
         </div>
     </section>
 
@@ -330,6 +335,7 @@
     let currentStatusFilter = 'all';
     let currentSheetFilter = 'all';
     let currentWhatsAppFilter = 'all';
+    let currentVisitFilter = 'all';
 
     document.addEventListener('DOMContentLoaded', loadGuests);
 
@@ -521,7 +527,15 @@
                 matchWhatsApp = !g.whatsapp_sent;
             }
 
-            return matchText && matchStatus && matchSheet && matchWhatsApp;
+            let matchVisit = true;
+            const hasVisits = (parseInt(g.visit_count, 10) || 0) > 0;
+            if (currentVisitFilter === 'visited') {
+                matchVisit = hasVisits;
+            } else if (currentVisitFilter === 'not_visited') {
+                matchVisit = !hasVisits;
+            }
+
+            return matchText && matchStatus && matchSheet && matchWhatsApp && matchVisit;
         });
     }
 
@@ -639,6 +653,11 @@
 
     document.getElementById('whatsappFilter').addEventListener('change', (e) => {
         currentWhatsAppFilter = e.target.value;
+        renderGuests();
+    });
+
+    document.getElementById('visitFilter').addEventListener('change', (e) => {
+        currentVisitFilter = e.target.value;
         renderGuests();
     });
 

@@ -76,15 +76,15 @@ class InvitationAdmin(admin.ModelAdmin):
         ('Personalización', {
             'fields': ('custom_primary_color', 'custom_secondary_color', 'hero_image', 'hero_image_position', 'section_background_image')
         }),
-        ('Mensaje de Despedida y Pase PDF', {
-            'fields': ('closing_message', 'default_pdf_message')
+        ('Mensajes Administrables', {
+            'fields': ('closing_message', 'final_info_title', 'final_info_message', 'final_info_whatsapp', 'default_pdf_message')
         }),
         ('Módulos Activos', {
             'fields': (
                 'show_countdown', 'show_ceremony', 'show_location', 'show_history', 
                 'show_gallery', 'show_sponsors', 'show_parents', 'show_program', 
                 'show_gift_table', 'show_music', 'show_rsvp', 'show_dress_code',
-                'show_closing_message'
+                'show_closing_message', 'show_final_info'
             ),
             'classes': ('collapse',)
         }),

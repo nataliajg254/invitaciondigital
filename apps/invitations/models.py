@@ -90,6 +90,10 @@ class Invitation(models.Model):
     show_rsvp = models.BooleanField(default=True, verbose_name="Mostrar RSVP")
     show_closing_message = models.BooleanField(default=True, verbose_name="Mostrar Mensaje de Despedida")
     closing_message = models.TextField(blank=True, null=True, verbose_name="Mensaje de Despedida", help_text="Ej. ¡Te espero con mucho anhelo y emoción... NO FALTES!")
+    show_final_info = models.BooleanField(default=True, verbose_name="Mostrar Información Final")
+    final_info_title = models.CharField(max_length=120, blank=True, default="Información", verbose_name="Título de Información Final")
+    final_info_message = models.TextField(blank=True, null=True, verbose_name="Mensaje de Información Final", help_text="Información adicional que aparecerá como última sección de la invitación.")
+    final_info_whatsapp = models.CharField(max_length=20, blank=True, null=True, verbose_name="WhatsApp de Información Final", help_text="Teléfono para solicitar más información. Incluye código de país o captura 10 dígitos de México.")
     default_pdf_message = models.TextField(default="Te invitamos cordialmente a celebrar este día tan especial con nosotros. Tu presencia es el mejor regalo.", verbose_name="Mensaje de Pase PDF por defecto")
     show_dress_code = models.BooleanField(default=True, verbose_name="Mostrar Código de Vestimenta")
     

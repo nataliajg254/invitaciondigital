@@ -121,6 +121,14 @@
                         <option value="pending">WhatsApp pendientes</option>
                     </select>
                 </div>
+                <div class="input-group" style="width: auto;">
+                    <span class="input-group-text bg-light border-0 text-muted"><i class="bi bi-eye"></i></span>
+                    <select id="visitFilter" class="form-select bg-light border-0" style="min-width: 170px; font-size: 0.9rem;">
+                        <option value="all">Todas las visitas</option>
+                        <option value="visited">Ya visualizaron</option>
+                        <option value="not_visited">Sin visualizar</option>
+                    </select>
+                </div>
                 <div class="input-group" style="max-width: 250px;">
                     <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
                     <input type="text" id="searchInput" class="form-control border-start-0 bg-light" placeholder="Buscar..." style="font-size: 0.9rem;">
@@ -404,6 +412,7 @@
     let currentStatusFilter = 'all';
     let currentSheetFilter = 'all';
     let currentWhatsAppFilter = 'all';
+    let currentVisitFilter = 'all';
 
     function renderTable() {
         const tbody = document.getElementById('guestsTableBody');
@@ -436,8 +445,16 @@
             } else if (currentWhatsAppFilter === 'pending') {
                 matchWhatsApp = !g.whatsapp_sent;
             }
+
+            let matchVisit = true;
+            const hasVisits = (parseInt(g.visit_count, 10) || 0) > 0;
+            if (currentVisitFilter === 'visited') {
+                matchVisit = hasVisits;
+            } else if (currentVisitFilter === 'not_visited') {
+                matchVisit = !hasVisits;
+            }
             
-            return matchText && matchStatus && matchSheet && matchWhatsApp;
+            return matchText && matchStatus && matchSheet && matchWhatsApp && matchVisit;
         });
 
         if (filtered.length === 0) {
@@ -536,6 +553,11 @@
 
     document.getElementById('whatsappFilter').addEventListener('change', (e) => {
         currentWhatsAppFilter = e.target.value;
+        renderTable();
+    });
+
+    document.getElementById('visitFilter').addEventListener('change', (e) => {
+        currentVisitFilter = e.target.value;
         renderTable();
     });
 
