@@ -43,6 +43,7 @@ staticfiles/
 *.xlsx#
 comand.py
 comand.txt
+command
 dev.py
 *Zone.Identifier
 .env.*

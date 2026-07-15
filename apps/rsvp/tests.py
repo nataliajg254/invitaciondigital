@@ -1,6 +1,10 @@
 from datetime import date, time
+from io import StringIO
+import uuid
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase
 from django.urls import reverse
 
@@ -233,3 +237,102 @@ class RsvpFlowTests(TestCase):
         self.assertIn('15 de agosto de 2026', rendered)
         self.assertIn('fecha por confirmar', rendered)
         self.assertIn('http://testserver/mis-xv/?guest=', rendered)
+
+    def test_reset_guest_status_dry_run_does_not_modify_guests(self):
+        self.guest.has_responded = True
+        self.guest.is_attending = True
+        self.guest.confirmed_companions = 3
+        self.guest.dietary_restrictions = 'Sin gluten'
+        self.guest.whatsapp_sent = True
+        self.guest.save()
+        output = StringIO()
+
+        call_command('reset_guest_status', stdout=output)
+
+        self.guest.refresh_from_db()
+        self.assertTrue(self.guest.has_responded)
+        self.assertTrue(self.guest.is_attending)
+        self.assertEqual(self.guest.confirmed_companions, 3)
+        self.assertEqual(self.guest.dietary_restrictions, 'Sin gluten')
+        self.assertTrue(self.guest.whatsapp_sent)
+        self.assertIn('Dry-run', output.getvalue())
+
+    def test_reset_guest_status_with_confirm_resets_all_guests(self):
+        other_invitation = Invitation.objects.create(
+            slug='otra-fiesta',
+            host_name='Otra Fiesta',
+            event_date=date(2026, 9, 1),
+            event_time=time(19, 0),
+        )
+        other_guest = Guest.objects.create(
+            invitation=other_invitation,
+            name='Familia Ruiz',
+            phone_number='8341112233',
+            max_companions=2,
+            has_responded=True,
+            is_attending=True,
+            confirmed_companions=2,
+            dietary_restrictions='Vegano',
+            whatsapp_sent=True,
+        )
+        self.guest.has_responded = True
+        self.guest.is_attending = True
+        self.guest.confirmed_companions = 3
+        self.guest.dietary_restrictions = 'Sin gluten'
+        self.guest.whatsapp_sent = True
+        self.guest.save()
+
+        call_command('reset_guest_status', '--confirm')
+
+        self.guest.refresh_from_db()
+        other_guest.refresh_from_db()
+        for guest in (self.guest, other_guest):
+            self.assertFalse(guest.has_responded)
+            self.assertFalse(guest.is_attending)
+            self.assertEqual(guest.confirmed_companions, 0)
+            self.assertEqual(guest.dietary_restrictions, '')
+            self.assertFalse(guest.whatsapp_sent)
+
+    def test_reset_guest_status_with_invitation_id_resets_only_that_invitation(self):
+        other_invitation = Invitation.objects.create(
+            slug='otra-fiesta',
+            host_name='Otra Fiesta',
+            event_date=date(2026, 9, 1),
+            event_time=time(19, 0),
+        )
+        other_guest = Guest.objects.create(
+            invitation=other_invitation,
+            name='Familia Ruiz',
+            phone_number='8341112233',
+            max_companions=2,
+            has_responded=True,
+            is_attending=True,
+            confirmed_companions=2,
+            dietary_restrictions='Vegano',
+            whatsapp_sent=True,
+        )
+        self.guest.has_responded = True
+        self.guest.is_attending = True
+        self.guest.confirmed_companions = 3
+        self.guest.dietary_restrictions = 'Sin gluten'
+        self.guest.whatsapp_sent = True
+        self.guest.save()
+
+        call_command('reset_guest_status', '--invitation-id', str(self.invitation.pk), '--confirm')
+
+        self.guest.refresh_from_db()
+        other_guest.refresh_from_db()
+        self.assertFalse(self.guest.has_responded)
+        self.assertFalse(self.guest.is_attending)
+        self.assertEqual(self.guest.confirmed_companions, 0)
+        self.assertEqual(self.guest.dietary_restrictions, '')
+        self.assertFalse(self.guest.whatsapp_sent)
+        self.assertTrue(other_guest.has_responded)
+        self.assertTrue(other_guest.is_attending)
+        self.assertEqual(other_guest.confirmed_companions, 2)
+        self.assertEqual(other_guest.dietary_restrictions, 'Vegano')
+        self.assertTrue(other_guest.whatsapp_sent)
+
+    def test_reset_guest_status_with_missing_invitation_id_raises_error(self):
+        with self.assertRaises(CommandError):
+            call_command('reset_guest_status', '--invitation-id', str(uuid.uuid4()), '--confirm')
