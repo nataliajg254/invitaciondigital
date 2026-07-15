@@ -48,7 +48,6 @@ def submit_rsvp(request, slug):
     except ValueError:
         number_of_companions = 0
         
-    dietary_restrictions = request.POST.get('dietary_restrictions', '')
     comments = request.POST.get('comments', '')
     
     if token:
@@ -65,7 +64,7 @@ def submit_rsvp(request, slug):
         guest_obj.has_responded = True
         guest_obj.is_attending = attending
         guest_obj.confirmed_companions = number_of_companions if attending else 0
-        guest_obj.dietary_restrictions = f"{dietary_restrictions}\n\nComentarios: {comments}"
+        guest_obj.dietary_restrictions = f"Comentarios: {comments}" if comments else ""
         guest_obj.save()
         
     else:

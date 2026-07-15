@@ -101,6 +101,35 @@ class RsvpFlowTests(TestCase):
         self.assertTrue(self.guest.has_responded)
         self.assertTrue(self.guest.is_attending)
         self.assertEqual(self.guest.confirmed_companions, 2)
+        self.assertEqual(self.guest.dietary_restrictions, 'Comentarios: Nos vemos alla')
+
+    def test_rsvp_submission_ignores_dietary_restrictions_field(self):
+        response = self.client.post(reverse('rsvp:submit', args=[self.invitation.slug]), {
+            'guest_token': str(self.guest.token),
+            'attending': 'true',
+            'number_of_companions': '2',
+            'dietary_restrictions': 'Alergia al mani',
+            'comments': 'Nos vemos alla',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.guest.refresh_from_db()
+        self.assertEqual(self.guest.dietary_restrictions, 'Comentarios: Nos vemos alla')
+
+    def test_guest_can_decline_without_confirming_passes(self):
+        response = self.client.post(reverse('rsvp:submit', args=[self.invitation.slug]), {
+            'guest_token': str(self.guest.token),
+            'attending': 'false',
+            'number_of_companions': '2',
+            'comments': '',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.guest.refresh_from_db()
+        self.assertTrue(self.guest.has_responded)
+        self.assertFalse(self.guest.is_attending)
+        self.assertEqual(self.guest.confirmed_companions, 0)
+        self.assertEqual(self.guest.dietary_restrictions, '')
 
     def test_public_rsvp_without_token_is_rejected(self):
         response = self.client.post(reverse('rsvp:submit', args=[self.invitation.slug]), {

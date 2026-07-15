@@ -486,7 +486,7 @@
 {% endif %}
     {% elif section.type == 'rsvp' %}
 <!-- 9. RSVP Module -->
-{% if invitation.show_rsvp %}
+{% if invitation.show_rsvp and current_guest %}
 <section id="rsvp" class="bg-dark text-white" style="padding: 8rem 0;">
     <div class="container text-center">
         <h2 class="section-title text-white" data-aos="fade-up">Confirmar Asistencia</h2>
@@ -560,14 +560,10 @@
                     <option value="false" {% if current_guest.has_responded and not current_guest.is_attending %}selected{% endif %}>No podré asistir</option>
                 </select>
             </div>
-            <div class="mb-3">
-                <label class="form-label">{% if current_guest %}Pases a Confirmar{% else %}Número de Acompañantes{% endif %}</label>
+            <div class="mb-3" id="rsvpCompanionsField">
+                <label class="form-label">{% if current_guest %}Pases a confirmar (máximo {{ current_guest.max_companions }}){% else %}Pases a confirmar (máximo 10){% endif %}</label>
                 <input type="number" class="form-control" name="number_of_companions" min="0" {% if current_guest %}max="{{ current_guest.max_companions }}"{% else %}max="10"{% endif %} value="{% if current_guest.has_responded %}{{ current_guest.confirmed_companions }}{% else %}0{% endif %}">
-                <div class="form-text">{% if current_guest %}Selecciona cuántos de tus {{ current_guest.max_companions }} pases vas a usar.{% else %}Sin contarte a ti. Si vas solo, pon 0.{% endif %}</div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Restricciones Alimenticias</label>
-                <input type="text" class="form-control" name="dietary_restrictions" placeholder="Opcional. Ej. Vegano, Alergia al maní">
+                {% if current_guest %}<div class="form-text">Selecciona cuántos de tus {{ current_guest.max_companions }} pases vas a usar.</div>{% endif %}
             </div>
             <div class="mb-3">
                 <label class="form-label">Mensaje para {{ invitation.host_name }}</label>
@@ -625,8 +621,28 @@
 </script>
 {% endif %}
 
-{% if invitation.show_rsvp %}
+{% if invitation.show_rsvp and current_guest %}
 <script>
+    function updateRsvpCompanionVisibility() {
+        const form = document.getElementById('rsvpForm');
+        if (!form) return;
+
+        const attendingSelect = form.querySelector('[name="attending"]');
+        const companionsField = document.getElementById('rsvpCompanionsField');
+        const companionsInput = form.querySelector('[name="number_of_companions"]');
+        const isDeclined = attendingSelect && attendingSelect.value === 'false';
+
+        if (companionsField) {
+            companionsField.classList.toggle('d-none', isDeclined);
+        }
+        if (companionsInput && isDeclined) {
+            companionsInput.value = 0;
+        }
+    }
+
+    document.getElementById('rsvpForm')?.querySelector('[name="attending"]')?.addEventListener('change', updateRsvpCompanionVisibility);
+    updateRsvpCompanionVisibility();
+
     document.getElementById('rsvpForm')?.addEventListener('submit', function(e) {
         e.preventDefault();
         const btn = document.getElementById('btnSubmitRsvp');
@@ -635,6 +651,10 @@
         
         const attendingVal = formData.get('attending');
         const companionsVal = parseInt(formData.get('number_of_companions') || 0);
+
+        if (attendingVal === 'false') {
+            formData.set('number_of_companions', '0');
+        }
 
         if (attendingVal === 'true' && companionsVal === 0) {
             alertBox.classList.remove('d-none', 'alert-success');
