@@ -73,7 +73,16 @@ def submit_rsvp(request, slug):
             'message': 'Necesitas un enlace personalizado para confirmar asistencia.'
         }, status=400)
         
-    return JsonResponse({'status': 'success', 'message': '¡Gracias por confirmar tu asistencia!'})
+    return JsonResponse({
+        'status': 'success',
+        'message': '¡Gracias por confirmar tu asistencia!',
+        'guest': {
+            'has_responded': guest_obj.has_responded,
+            'is_attending': guest_obj.is_attending,
+            'confirmed_companions': guest_obj.confirmed_companions,
+            'max_companions': guest_obj.max_companions,
+        },
+    })
 
 
 @staff_member_required

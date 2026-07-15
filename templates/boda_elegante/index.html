@@ -207,6 +207,7 @@
                 {% endif %}
             </div>
         {% else %}
+            <div id="rsvpStatusMessage">
             {% if current_guest and current_guest.has_responded %}
                 <div class="alert alert-success d-inline-block p-4 mb-4 text-center rounded-0" data-aos="zoom-in">
                     <h4 class="elegant-font mb-2">{% if current_guest.is_attending %}¡Gracias por confirmar tu asistencia!{% else %}Lamentamos que no nos acompañes.{% endif %}</h4>
@@ -215,10 +216,11 @@
             {% else %}
                 <p class="fs-5 mb-5" data-aos="fade-up" data-aos-delay="100">Esperamos contar con tu presencia en este día tan especial.</p>
             {% endif %}
+            </div>
             
             {% if effective_deadline %}
             <div class="mb-5" data-aos="fade-up" data-aos-delay="150">
-                <p class="text-dark fw-bold mb-3"><i class="bi bi-clock me-2"></i>Tienes hasta el {{ effective_deadline|date:"d \d\e F \a \l\a\s h:i A" }} para {% if current_guest.has_responded %}editar tu confirmación{% else %}confirmar{% endif %}.</p>
+                <p class="text-dark fw-bold mb-3"><i class="bi bi-clock me-2"></i>Tienes hasta el {{ effective_deadline|date:"d \d\e F \a \l\a\s h:i A" }} para <span id="rsvpDeadlineAction">{% if current_guest.has_responded %}editar tu confirmación{% else %}confirmar{% endif %}</span>.</p>
                 <div class="d-flex justify-content-center flex-wrap gap-3" id="rsvp-timer">
                     <div class="countdown-box border border-dark rounded-0 text-dark" style="width:70px; height:70px; padding: 10px;"><div id="r-days" class="fs-4 fw-bold">00</div><div style="font-size: 0.7rem;">Días</div></div>
                     <div class="countdown-box border border-dark rounded-0 text-dark" style="width:70px; height:70px; padding: 10px;"><div id="r-hours" class="fs-4 fw-bold">00</div><div style="font-size: 0.7rem;">Hrs</div></div>
@@ -228,7 +230,7 @@
             </div>
             {% endif %}
             
-            <a href="#" class="btn {% if current_guest.has_responded %}btn-outline-dark{% else %}btn-primary{% endif %} px-5 py-3 rounded-0" data-aos="zoom-in" data-bs-toggle="modal" data-bs-target="#rsvpModal">
+            <a href="#" id="rsvpOpenButton" class="btn {% if current_guest.has_responded %}btn-outline-dark{% else %}btn-primary{% endif %} px-5 py-3 rounded-0" data-aos="zoom-in" data-bs-toggle="modal" data-bs-target="#rsvpModal">
                 {% if current_guest.has_responded %}EDITAR CONFIRMACIÓN{% else %}CONFIRMAR ASISTENCIA{% endif %}
             </a>
         {% endif %}
@@ -287,6 +289,69 @@
 {% block extra_js %}
 {% if invitation.show_rsvp and current_guest %}
 <script>
+    const rsvpState = {
+        hasResponded: {{ current_guest.has_responded|yesno:"true,false" }},
+        isAttending: {{ current_guest.is_attending|yesno:"true,false" }},
+        confirmedCompanions: {{ current_guest.confirmed_companions|default:0 }}
+    };
+
+    function updateRsvpSection() {
+        const statusMessage = document.getElementById('rsvpStatusMessage');
+        const openButton = document.getElementById('rsvpOpenButton');
+
+        if (statusMessage) {
+            if (rsvpState.hasResponded) {
+                const title = rsvpState.isAttending ? '¡Gracias por confirmar tu asistencia!' : 'Lamentamos que no nos acompañes.';
+                const detail = rsvpState.isAttending ? `Has confirmado <strong>${rsvpState.confirmedCompanions}</strong> pase(s).` : '';
+                statusMessage.innerHTML = `
+                    <div class="alert alert-success d-inline-block p-4 mb-4 text-center rounded-0">
+                        <h4 class="elegant-font mb-2">${title}</h4>
+                        <p class="mb-0 mt-2 fs-5">${detail}</p>
+                    </div>`;
+            } else {
+                statusMessage.innerHTML = '<p class="fs-5 mb-5">Esperamos contar con tu presencia en este día tan especial.</p>';
+            }
+        }
+
+        if (openButton) {
+            openButton.classList.toggle('btn-primary', !rsvpState.hasResponded);
+            openButton.classList.toggle('btn-outline-dark', rsvpState.hasResponded);
+            openButton.textContent = rsvpState.hasResponded ? 'EDITAR CONFIRMACIÓN' : 'CONFIRMAR ASISTENCIA';
+        }
+
+        const deadlineAction = document.getElementById('rsvpDeadlineAction');
+        if (deadlineAction) {
+            deadlineAction.textContent = rsvpState.hasResponded ? 'editar tu confirmación' : 'confirmar';
+        }
+    }
+
+    function syncRsvpFormFromState() {
+        const form = document.getElementById('rsvpForm');
+        if (!form) return;
+
+        const attendingSelect = form.querySelector('[name="attending"]');
+        const companionsInput = form.querySelector('[name="number_of_companions"]');
+        const alertBox = document.getElementById('rsvpAlert');
+
+        if (!rsvpState.hasResponded) {
+            form.reset();
+        } else {
+            if (attendingSelect) {
+                attendingSelect.value = rsvpState.isAttending ? 'true' : 'false';
+            }
+            if (companionsInput) {
+                companionsInput.value = rsvpState.isAttending ? rsvpState.confirmedCompanions : 0;
+            }
+        }
+        if (alertBox) {
+            alertBox.classList.add('d-none');
+            alertBox.classList.remove('alert-success', 'alert-danger');
+            alertBox.innerText = '';
+        }
+
+        updateRsvpCompanionVisibility();
+    }
+
     function updateRsvpCompanionVisibility() {
         const form = document.getElementById('rsvpForm');
         if (!form) return;
@@ -306,6 +371,7 @@
 
     document.getElementById('rsvpForm')?.querySelector('[name="attending"]')?.addEventListener('change', updateRsvpCompanionVisibility);
     updateRsvpCompanionVisibility();
+    document.getElementById('rsvpModal')?.addEventListener('show.bs.modal', syncRsvpFormFromState);
 
     document.getElementById('rsvpForm')?.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -342,7 +408,16 @@
             if(data.status === 'success') {
                 alertBox.classList.add('alert-success');
                 alertBox.innerText = data.message;
-                this.reset();
+                if (data.guest) {
+                    rsvpState.hasResponded = data.guest.has_responded;
+                    rsvpState.isAttending = data.guest.is_attending;
+                    rsvpState.confirmedCompanions = data.guest.confirmed_companions;
+                    updateRsvpSection();
+                    syncRsvpFormFromState();
+                }
+                const modalEl = document.getElementById('rsvpModal');
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.hide();
             } else {
                 alertBox.classList.add('alert-danger');
                 alertBox.innerText = data.message;
@@ -355,6 +430,7 @@
         })
         .finally(() => {
             btn.disabled = false;
+            btn.innerText = 'ENVIAR';
         });
     });
 </script>

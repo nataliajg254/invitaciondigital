@@ -97,6 +97,10 @@ class RsvpFlowTests(TestCase):
         })
 
         self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['guest']['confirmed_companions'], 2)
+        self.assertTrue(data['guest']['has_responded'])
+        self.assertTrue(data['guest']['is_attending'])
         self.guest.refresh_from_db()
         self.assertTrue(self.guest.has_responded)
         self.assertTrue(self.guest.is_attending)
@@ -125,6 +129,10 @@ class RsvpFlowTests(TestCase):
         })
 
         self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['guest']['confirmed_companions'], 0)
+        self.assertTrue(data['guest']['has_responded'])
+        self.assertFalse(data['guest']['is_attending'])
         self.guest.refresh_from_db()
         self.assertTrue(self.guest.has_responded)
         self.assertFalse(self.guest.is_attending)
