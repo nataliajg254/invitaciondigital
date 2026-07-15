@@ -273,13 +273,45 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="whatsappMessageModal" tabindex="-1" aria-labelledby="whatsappMessageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="whatsappMessageModalLabel">Elegir mensaje</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="whatsappMessageSelect" class="form-label">Mensaje</label>
+                    <select id="whatsappMessageSelect" class="form-select form-select-lg"></select>
+                </div>
+                <div class="mb-3">
+                    <label for="whatsappMessagePreview" class="form-label">Vista previa</label>
+                    <textarea id="whatsappMessagePreview" class="form-control" rows="11" readonly></textarea>
+                </div>
+                <div class="form-text">La vista previa ya incluye los datos del invitado y el enlace personalizado.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="sendWhatsAppMessageBtn" onclick="sendSelectedWhatsAppMessage()">
+                    <i class="bi bi-whatsapp"></i> Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     const API_URL = '/api/{{ invitation.slug }}/guests/';
+    const WHATSAPP_MESSAGES_URL = '/api/{{ invitation.slug }}/whatsapp-messages/';
     const guestModal = new bootstrap.Modal(document.getElementById('guestModal'));
+    const whatsappMessageModal = new bootstrap.Modal(document.getElementById('whatsappMessageModal'));
     let guestsData = [];
+    let whatsappMessagesData = null;
+    let selectedWhatsAppGuestId = null;
     let currentFilterText = '';
     let currentStatusFilter = 'all';
     let currentSheetFilter = 'all';
@@ -344,6 +376,80 @@
         } catch (error) {
             Swal.fire('Atención', 'Se abrió WhatsApp, pero no se pudo marcar como enviado.', 'warning');
         }
+    }
+
+    async function loadWhatsAppMessages() {
+        if (whatsappMessagesData) return whatsappMessagesData;
+
+        const response = await fetch(WHATSAPP_MESSAGES_URL);
+        if (!response.ok) throw new Error('Error loading WhatsApp messages');
+        whatsappMessagesData = await response.json();
+
+        const select = document.getElementById('whatsappMessageSelect');
+        select.innerHTML = '';
+        whatsappMessagesData.forEach(message => {
+            const option = document.createElement('option');
+            option.value = message.id || '';
+            option.textContent = message.is_default ? `${message.title} (por defecto)` : message.title;
+            option.dataset.default = message.is_default ? 'true' : 'false';
+            select.appendChild(option);
+        });
+
+        const defaultOption = Array.from(select.options).find(option => option.dataset.default === 'true');
+        if (defaultOption) select.value = defaultOption.value;
+        return whatsappMessagesData;
+    }
+
+    async function updateWhatsAppMessagePreview() {
+        const preview = document.getElementById('whatsappMessagePreview');
+        const sendBtn = document.getElementById('sendWhatsAppMessageBtn');
+        const select = document.getElementById('whatsappMessageSelect');
+        preview.value = 'Cargando mensaje...';
+        sendBtn.disabled = true;
+
+        try {
+            const params = select.value ? `?message_id=${encodeURIComponent(select.value)}` : '';
+            const response = await fetch(`${API_URL}${selectedWhatsAppGuestId}/whatsapp-message-preview/${params}`);
+            if (!response.ok) throw new Error('Error loading WhatsApp preview');
+            const data = await response.json();
+            preview.value = data.message;
+            sendBtn.disabled = false;
+        } catch (error) {
+            preview.value = '';
+            Swal.fire('Error', 'No se pudo cargar la vista previa del mensaje.', 'error');
+        }
+    }
+
+    async function openWhatsAppMessageModal(guestId) {
+        const guest = guestsData.find(g => String(g.id) === String(guestId));
+        if (!guest || !normalizeWhatsAppPhone(guest.phone_number)) {
+            Swal.fire('Atención', 'Este invitado no tiene un teléfono válido para WhatsApp.', 'warning');
+            return;
+        }
+
+        selectedWhatsAppGuestId = guestId;
+        try {
+            await loadWhatsAppMessages();
+            whatsappMessageModal.show();
+            updateWhatsAppMessagePreview();
+        } catch (error) {
+            Swal.fire('Error', 'No se pudieron cargar los mensajes de WhatsApp.', 'error');
+        }
+    }
+
+    function sendSelectedWhatsAppMessage() {
+        const guest = guestsData.find(g => String(g.id) === String(selectedWhatsAppGuestId));
+        const whatsappPhone = normalizeWhatsAppPhone(guest && guest.phone_number);
+        const message = document.getElementById('whatsappMessagePreview').value;
+
+        if (!guest || !whatsappPhone || !message) {
+            Swal.fire('Atención', 'No se puede enviar el mensaje seleccionado.', 'warning');
+            return;
+        }
+
+        window.open(`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`, '_blank');
+        markWhatsAppSent(selectedWhatsAppGuestId);
+        whatsappMessageModal.hide();
     }
 
     function populateSheetFilter() {
@@ -439,10 +545,8 @@
                 : '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-clock"></i> WhatsApp pendiente</span>';
 
             const whatsappPhone = normalizeWhatsAppPhone(g.phone_number);
-            const domain = window.location.host;
-            const msg = `¡Hola ${g.name}! Te invito cordialmente a mi evento. 🥳\n\nEn el siguiente enlace puedes ver todos los detalles y confirmar tu asistencia:\n${window.location.protocol}//${domain}/${'{{ invitation.slug }}'}/?guest=${g.token}\n\n¡Te espero con mucha emoción!`;
             const waLink = whatsappPhone
-                ? `<a href="https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}" target="_blank" class="btn btn-success btn-icon-text" title="Enviar WhatsApp" onclick="markWhatsAppSent(${g.id})"><i class="bi bi-whatsapp"></i><span>WhatsApp</span></a>`
+                ? `<button type="button" class="btn btn-success btn-icon-text" title="Enviar WhatsApp" onclick="openWhatsAppMessageModal(${g.id})"><i class="bi bi-whatsapp"></i><span>WhatsApp</span></button>`
                 : '<button class="btn btn-outline-secondary btn-icon-text" type="button" disabled><i class="bi bi-whatsapp"></i><span>WhatsApp</span></button>';
 
             const card = `
@@ -504,6 +608,8 @@
         currentWhatsAppFilter = e.target.value;
         renderGuests();
     });
+
+    document.getElementById('whatsappMessageSelect').addEventListener('change', updateWhatsAppMessagePreview);
 
     function openGuestModal() {
         document.getElementById('guestForm').reset();

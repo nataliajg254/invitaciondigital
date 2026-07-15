@@ -7,6 +7,7 @@ from django.urls import path
 from django.urls import reverse
 from django.utils.html import format_html
 from .models import Guest
+from .whatsapp_messages import get_whatsapp_message_template, render_whatsapp_message
 
 
 def normalize_whatsapp_phone(phone_number):
@@ -56,14 +57,8 @@ class GuestAdmin(admin.ModelAdmin):
             guest.whatsapp_sent = True
             guest.save(update_fields=['whatsapp_sent', 'updated_at'])
 
-        invitation_path = reverse('invitations:detail', args=[guest.invitation.slug])
-        invitation_url = request.build_absolute_uri(f'{invitation_path}?guest={guest.token}')
-        message = (
-            f"¡Hola {guest.name}! Te invito cordialmente a mi evento. 🥳\n\n"
-            "En el siguiente enlace puedes ver todos los detalles y confirmar tu asistencia:\n"
-            f"{invitation_url}\n\n"
-            "¡Te espero con mucha emoción!"
-        )
+        template = get_whatsapp_message_template(guest.invitation)
+        message = render_whatsapp_message(template, guest.invitation, guest, request)
         encoded_message = urllib.parse.quote(message)
         return redirect(f'https://wa.me/{phone_number}?text={encoded_message}')
 

@@ -116,6 +116,31 @@ class Invitation(models.Model):
         return f"{self.host_name} - {self.get_event_type_display()}"
 
 
+class InvitationWhatsAppMessage(models.Model):
+    invitation = models.ForeignKey(Invitation, related_name='whatsapp_messages', on_delete=models.CASCADE)
+    title = models.CharField(max_length=100, verbose_name="Título")
+    body = models.TextField(
+        verbose_name="Mensaje",
+        help_text=(
+            "Variables disponibles: {guest_name}, {guest_alias}, {event_name}, "
+            "{event_date}, {event_time}, {rsvp_deadline}, {invitation_url}"
+        ),
+    )
+    is_default = models.BooleanField(default=False, verbose_name="Mensaje por defecto")
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
+    order = models.PositiveIntegerField(default=0, verbose_name="Orden")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'title']
+        verbose_name = "Mensaje WhatsApp"
+        verbose_name_plural = "Mensajes WhatsApp"
+
+    def __str__(self):
+        return f"{self.invitation.host_name} - {self.title}"
+
+
 class ProgramEvent(models.Model):
     invitation = models.ForeignKey(Invitation, related_name='program_events', on_delete=models.CASCADE)
     time = models.TimeField()

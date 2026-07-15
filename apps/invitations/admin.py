@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.admin.sites import NotRegistered
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Invitation, ProgramEvent, Sponsor, GiftRegistry, Parent, SeparatorImage
+from .models import Invitation, InvitationWhatsAppMessage, ProgramEvent, Sponsor, GiftRegistry, Parent, SeparatorImage
 
 class InvitationAdminForm(forms.ModelForm):
     class Meta:
@@ -26,6 +26,12 @@ class SponsorInline(admin.TabularInline):
 class GiftRegistryInline(admin.TabularInline):
     model = GiftRegistry
     extra = 1
+
+
+class InvitationWhatsAppMessageInline(admin.StackedInline):
+    model = InvitationWhatsAppMessage
+    extra = 1
+    fields = ('title', 'body', 'is_default', 'is_active', 'order')
 
 
 class SeparatorImageInline(admin.TabularInline):
@@ -52,7 +58,7 @@ class InvitationAdmin(admin.ModelAdmin):
     search_fields = ('host_name', 'slug')
     prepopulated_fields = {'slug': ('host_name',)}
     filter_horizontal = ('administrators',)
-    inlines = [ProgramEventInline, SponsorInline, ParentInline, GiftRegistryInline, SeparatorImageInline]
+    inlines = [InvitationWhatsAppMessageInline, ProgramEventInline, SponsorInline, ParentInline, GiftRegistryInline, SeparatorImageInline]
     
     fieldsets = (
         ('Información Principal', {

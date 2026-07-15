@@ -1,6 +1,15 @@
 from django.urls import path
 from . import views
-from rsvp.views import guest_dashboard, api_guests_list_create, api_guest_detail, api_guest_whatsapp_sent, api_download_excel_template, api_upload_excel_guests
+from rsvp.views import (
+    guest_dashboard,
+    api_guests_list_create,
+    api_guest_detail,
+    api_guest_whatsapp_sent,
+    api_whatsapp_messages,
+    api_guest_whatsapp_message_preview,
+    api_download_excel_template,
+    api_upload_excel_guests,
+)
 
 app_name = 'invitations'
 
@@ -10,8 +19,10 @@ urlpatterns = [
     
     # Guest Dashboard API Endpoints
     path('api/<slug:slug>/guests/', api_guests_list_create, name='api_guests_list_create'),
+    path('api/<slug:slug>/whatsapp-messages/', api_whatsapp_messages, name='api_whatsapp_messages'),
     path('api/<slug:slug>/guests/excel-template/', api_download_excel_template, name='api_download_excel_template'),
     path('api/<slug:slug>/guests/excel-upload/', api_upload_excel_guests, name='api_upload_excel_guests'),
+    path('api/<slug:slug>/guests/<int:guest_id>/whatsapp-message-preview/', api_guest_whatsapp_message_preview, name='api_guest_whatsapp_message_preview'),
     path('api/<slug:slug>/guests/<int:guest_id>/whatsapp-sent/', api_guest_whatsapp_sent, name='api_guest_whatsapp_sent'),
     path('api/<slug:slug>/guests/<int:guest_id>/', api_guest_detail, name='api_guest_detail'),
 

@@ -14,6 +14,11 @@ from io import BytesIO
 import openpyxl
 from openpyxl.styles import PatternFill, Font, Alignment
 from django.db import transaction
+from .whatsapp_messages import (
+    get_whatsapp_message_options,
+    get_whatsapp_message_template,
+    render_whatsapp_message,
+)
 
 @require_POST
 def submit_rsvp(request, slug):
@@ -237,6 +242,23 @@ def api_guest_whatsapp_sent(request, slug, guest_id):
         guest.whatsapp_sent = True
         guest.save(update_fields=['whatsapp_sent', 'updated_at'])
     return JsonResponse({'status': 'success', 'whatsapp_sent': guest.whatsapp_sent})
+
+
+@check_invitation_access
+@require_http_methods(["GET"])
+def api_whatsapp_messages(request, slug):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    return JsonResponse(get_whatsapp_message_options(invitation), safe=False)
+
+
+@check_invitation_access
+@require_http_methods(["GET"])
+def api_guest_whatsapp_message_preview(request, slug, guest_id):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    guest = get_object_or_404(Guest, id=guest_id, invitation=invitation)
+    message_id = request.GET.get('message_id') or None
+    template = get_whatsapp_message_template(invitation, message_id)
+    return JsonResponse({'message': render_whatsapp_message(template, invitation, guest, request)})
 
 
 @check_invitation_access

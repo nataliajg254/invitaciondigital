@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from invitations.models import Invitation
+from invitations.models import Invitation, InvitationWhatsAppMessage
 from rsvp.admin import normalize_whatsapp_phone
 from rsvp.models import Guest
 
@@ -171,3 +171,65 @@ class RsvpFlowTests(TestCase):
         self.assertEqual(response.json(), {'status': 'success', 'whatsapp_sent': True})
         self.guest.refresh_from_db()
         self.assertTrue(self.guest.whatsapp_sent)
+
+    def test_whatsapp_messages_api_returns_active_messages_ordered(self):
+        self.client.login(username='manager', password='pass12345')
+        InvitationWhatsAppMessage.objects.create(
+            invitation=self.invitation,
+            title='Segundo',
+            body='Hola {guest_name}',
+            order=2,
+        )
+        InvitationWhatsAppMessage.objects.create(
+            invitation=self.invitation,
+            title='Primero',
+            body='Hola {event_name}',
+            is_default=True,
+            order=1,
+        )
+        InvitationWhatsAppMessage.objects.create(
+            invitation=self.invitation,
+            title='Inactivo',
+            body='No sale',
+            is_active=False,
+            order=0,
+        )
+
+        response = self.client.get(reverse('invitations:api_whatsapp_messages', args=[self.invitation.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual([item['title'] for item in data], ['Primero', 'Segundo'])
+        self.assertTrue(data[0]['is_default'])
+
+    def test_whatsapp_messages_api_returns_fallback_without_messages(self):
+        self.client.login(username='manager', password='pass12345')
+
+        response = self.client.get(reverse('invitations:api_whatsapp_messages', args=[self.invitation.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()[0]['title'], 'Mensaje predeterminado')
+        self.assertTrue(response.json()[0]['is_default'])
+
+    def test_whatsapp_message_preview_renders_guest_and_invitation_variables(self):
+        self.client.login(username='manager', password='pass12345')
+        message = InvitationWhatsAppMessage.objects.create(
+            invitation=self.invitation,
+            title='Con variables',
+            body='{guest_name}|{guest_alias}|{event_name}|{event_date}|{event_time}|{rsvp_deadline}|{invitation_url}',
+            is_default=True,
+        )
+
+        response = self.client.get(
+            reverse('invitations:api_guest_whatsapp_message_preview', args=[self.invitation.slug, self.guest.pk]),
+            {'message_id': message.pk},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        rendered = response.json()['message']
+        self.assertIn('Familia Perez', rendered)
+        self.assertIn('Los Perez', rendered)
+        self.assertIn('Natalia', rendered)
+        self.assertIn('15 de agosto de 2026', rendered)
+        self.assertIn('fecha por confirmar', rendered)
+        self.assertIn('http://testserver/mis-xv/?guest=', rendered)
