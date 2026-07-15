@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import path
 from django.urls import reverse
 from django.utils.html import format_html
-from .models import Guest
+from .models import Guest, GuestVisit
 from .whatsapp_messages import get_whatsapp_message_template, render_whatsapp_message
 
 
@@ -81,3 +81,17 @@ class GuestAdmin(admin.ModelAdmin):
                 'classes': ('collapse',)
             }),
         )
+
+
+@admin.register(GuestVisit)
+class GuestVisitAdmin(admin.ModelAdmin):
+    list_display = ('guest', 'invitation', 'visited_at', 'ip_address')
+    list_filter = ('invitation', 'visited_at')
+    search_fields = ('guest__name', 'guest__alias', 'ip_address', 'user_agent')
+    readonly_fields = ('guest', 'invitation', 'visited_at', 'ip_address', 'user_agent')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

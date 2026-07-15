@@ -541,6 +541,7 @@
             const escapedAlias = escapeHtml(g.alias);
             const escapedPhone = escapeHtml(g.phone_number);
             const escapedMaxCompanions = escapeHtml(g.max_companions);
+            const escapedVisitCount = escapeHtml(g.visit_count || 0);
             let statusBadge = '<span class="badge bg-secondary">Sin respuesta</span>';
             let confirmedCount = '<span class="text-muted">-</span>';
 
@@ -584,6 +585,10 @@
                         <div class="meta-box">
                             <span class="meta-label">Pases confirmados</span>
                             <span class="meta-value">${confirmedCount}</span>
+                        </div>
+                        <div class="meta-box">
+                            <span class="meta-label">Visitas</span>
+                            <span class="meta-value">${escapedVisitCount}</span>
                         </div>
                     </div>
                     <div class="guest-actions">

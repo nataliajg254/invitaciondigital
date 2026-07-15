@@ -10,7 +10,7 @@ from django.urls import reverse
 
 from invitations.models import Invitation, InvitationWhatsAppMessage
 from rsvp.admin import normalize_whatsapp_phone
-from rsvp.models import Guest
+from rsvp.models import Guest, GuestVisit
 
 
 class RsvpFlowTests(TestCase):
@@ -180,6 +180,41 @@ class RsvpFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()[0]['alias'], 'Los Perez')
+
+    def test_invitation_detail_tracks_valid_guest_visit(self):
+        response = self.client.get(
+            reverse('invitations:detail', args=[self.invitation.slug]),
+            {'guest': str(self.guest.token)},
+            REMOTE_ADDR='127.0.0.1',
+            HTTP_USER_AGENT='Mozilla/5.0 Test Browser',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        visit = GuestVisit.objects.get(guest=self.guest)
+        self.assertEqual(visit.invitation, self.invitation)
+        self.assertEqual(visit.ip_address, '127.0.0.1')
+        self.assertEqual(visit.user_agent, 'Mozilla/5.0 Test Browser')
+
+    def test_invitation_detail_does_not_track_missing_or_invalid_guest_visit(self):
+        response_without_guest = self.client.get(reverse('invitations:detail', args=[self.invitation.slug]))
+        response_with_invalid_guest = self.client.get(
+            reverse('invitations:detail', args=[self.invitation.slug]),
+            {'guest': str(uuid.uuid4())},
+        )
+
+        self.assertEqual(response_without_guest.status_code, 200)
+        self.assertEqual(response_with_invalid_guest.status_code, 200)
+        self.assertEqual(GuestVisit.objects.count(), 0)
+
+    def test_guests_api_includes_visit_count(self):
+        self.client.login(username='manager', password='pass12345')
+        GuestVisit.objects.create(invitation=self.invitation, guest=self.guest)
+        GuestVisit.objects.create(invitation=self.invitation, guest=self.guest)
+
+        response = self.client.get(reverse('invitations:api_guests_list_create', args=[self.invitation.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()[0]['visit_count'], 2)
 
     def test_guest_api_can_create_and_update_alias(self):
         self.client.login(username='manager', password='pass12345')

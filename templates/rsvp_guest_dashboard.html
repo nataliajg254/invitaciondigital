@@ -136,6 +136,7 @@
                         <th>Teléfono</th>
                         <th class="text-center">Pases Asignados</th>
                         <th class="text-center">Pases Confirmados</th>
+                        <th class="text-center">Visitas</th>
                         <th class="text-center">Estado</th>
                         <th class="text-center">WhatsApp</th>
                         <th class="text-end">Acciones</th>
@@ -143,7 +144,7 @@
                 </thead>
                 <tbody id="guestsTableBody">
                     <tr>
-                        <td colspan="8" class="text-center py-4 text-muted">Cargando invitados...</td>
+                        <td colspan="9" class="text-center py-4 text-muted">Cargando invitados...</td>
                     </tr>
                 </tbody>
             </table>
@@ -440,7 +441,7 @@
         });
 
         if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">No se encontraron invitados.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No se encontraron invitados.</td></tr>`;
             return;
         }
 
@@ -449,6 +450,7 @@
             const escapedAlias = escapeHtml(g.alias);
             const escapedPhone = escapeHtml(g.phone_number);
             const escapedMaxCompanions = escapeHtml(g.max_companions);
+            const escapedVisitCount = escapeHtml(g.visit_count || 0);
             let statusBadge = '<span class="badge bg-secondary">Sin respuesta</span>';
             let confirmedCount = '<span class="text-muted">-</span>';
             
@@ -480,6 +482,7 @@
                     <td>${g.phone_number ? escapedPhone : '<span class="text-muted">-</span>'}</td>
                     <td class="text-center">${escapedMaxCompanions}</td>
                     <td class="text-center">${confirmedCount}</td>
+                    <td class="text-center">${escapedVisitCount}</td>
                     <td class="text-center">${statusBadge}</td>
                     <td class="text-center">${whatsappStatusBadge}</td>
                     <td class="text-end">

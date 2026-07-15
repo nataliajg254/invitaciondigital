@@ -7,6 +7,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.template.loader import get_template
 from django.conf import settings
 from django.utils import timezone
+from django.db.models import Count
 from invitations.models import Invitation
 from .models import Guest
 from xhtml2pdf import pisa
@@ -187,7 +188,7 @@ def api_guests_list_create(request, slug):
     invitation = get_object_or_404(Invitation, slug=slug)
     
     if request.method == "GET":
-        guests = Guest.objects.filter(invitation=invitation).order_by('-created_at')
+        guests = Guest.objects.filter(invitation=invitation).annotate(visit_count=Count('visits')).order_by('-created_at')
         data = [{
             'id': g.id,
             'name': g.name,
@@ -200,6 +201,7 @@ def api_guests_list_create(request, slug):
             'token': g.token,
             'sheet_name': g.sheet_name,
             'whatsapp_sent': g.whatsapp_sent,
+            'visit_count': g.visit_count,
         } for g in guests]
         return JsonResponse(data, safe=False)
         

@@ -1,7 +1,14 @@
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 from .models import Invitation
-from rsvp.models import Guest
+from rsvp.models import Guest, GuestVisit
+
+
+def get_client_ip(request):
+    forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR')
 
 def invitation_detail(request, slug):
     invitation = get_object_or_404(Invitation, slug=slug)
@@ -13,6 +20,12 @@ def invitation_detail(request, slug):
     if guest_token:
         try:
             current_guest = Guest.objects.get(token=guest_token, invitation=invitation)
+            GuestVisit.objects.create(
+                invitation=invitation,
+                guest=current_guest,
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            )
         except (Guest.DoesNotExist, ValueError):
             pass
             

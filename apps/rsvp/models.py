@@ -39,3 +39,19 @@ class Guest(models.Model):
         if self.has_responded:
             status = "Sí" if self.is_attending else "No"
         return f"{self.name} - Asiste: {status}"
+
+
+class GuestVisit(models.Model):
+    invitation = models.ForeignKey(Invitation, related_name='guest_visits', on_delete=models.CASCADE)
+    guest = models.ForeignKey(Guest, related_name='visits', on_delete=models.CASCADE)
+    visited_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de visita")
+    ip_address = models.GenericIPAddressField(blank=True, null=True, verbose_name="Dirección IP")
+    user_agent = models.TextField(blank=True, verbose_name="User agent")
+
+    class Meta:
+        ordering = ['-visited_at']
+        verbose_name = "Visita de invitado"
+        verbose_name_plural = "Visitas de invitados"
+
+    def __str__(self):
+        return f"{self.guest.name} - {self.visited_at:%Y-%m-%d %H:%M}"
