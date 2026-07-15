@@ -47,9 +47,11 @@
         gap: 0.55rem;
     }
     .quick-actions,
-    .stats-strip,
     .guest-actions {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .stats-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .guest-meta {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -205,6 +207,18 @@
         <div class="stat-tile">
             <span class="stat-label">Pases</span>
             <span class="stat-value" id="stat-passes">0</span>
+        </div>
+        <div class="stat-tile">
+            <span class="stat-label">Pases confirmados</span>
+            <span class="stat-value" id="stat-confirmed-passes">0</span>
+        </div>
+        <div class="stat-tile">
+            <span class="stat-label">No confirmados</span>
+            <span class="stat-value" id="stat-unconfirmed-passes">0</span>
+        </div>
+        <div class="stat-tile">
+            <span class="stat-label">Pendientes</span>
+            <span class="stat-value" id="stat-pending-passes">0</span>
         </div>
     </section>
 
@@ -584,9 +598,23 @@
     }
 
     function updateStats() {
+        const totalPasses = guestsData.reduce((sum, g) => sum + (parseInt(g.max_companions, 10) || 0), 0);
+        const confirmedPasses = guestsData.reduce((sum, g) => {
+            if (!g.has_responded || !g.is_attending) return sum;
+            return sum + (parseInt(g.confirmed_companions, 10) || 0);
+        }, 0);
+        const pendingPasses = guestsData.reduce((sum, g) => {
+            if (g.has_responded) return sum;
+            return sum + (parseInt(g.max_companions, 10) || 0);
+        }, 0);
+        const unconfirmedPasses = Math.max(totalPasses - confirmedPasses - pendingPasses, 0);
+
         document.getElementById('stat-total').innerText = guestsData.length;
         document.getElementById('stat-attending').innerText = guestsData.filter(g => g.has_responded && g.is_attending).length;
-        document.getElementById('stat-passes').innerText = guestsData.reduce((sum, g) => sum + g.max_companions, 0);
+        document.getElementById('stat-passes').innerText = totalPasses;
+        document.getElementById('stat-confirmed-passes').innerText = confirmedPasses;
+        document.getElementById('stat-unconfirmed-passes').innerText = unconfirmedPasses;
+        document.getElementById('stat-pending-passes').innerText = pendingPasses;
     }
 
     document.getElementById('searchInput').addEventListener('input', (e) => {

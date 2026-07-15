@@ -42,7 +42,7 @@
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 col-xl-2 mb-3">
             <div class="card bg-primary text-white h-100">
                 <div class="card-body">
                     <h6 class="card-title text-white-50">Total Invitados</h6>
@@ -50,7 +50,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 col-xl-2 mb-3">
             <div class="card bg-success text-white h-100">
                 <div class="card-body">
                     <h6 class="card-title text-white-50">Confirmaron Asistencia</h6>
@@ -58,11 +58,35 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 col-xl-2 mb-3">
             <div class="card bg-info text-white h-100">
                 <div class="card-body">
                     <h6 class="card-title text-white-50">Pases (Lugares) Asignados</h6>
                     <h2 class="mb-0" id="stat-passes">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-xl-2 mb-3">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-white-50">Pases Confirmados</h6>
+                    <h2 class="mb-0" id="stat-confirmed-passes">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-xl-2 mb-3">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-white-50">Pases No Confirmados</h6>
+                    <h2 class="mb-0" id="stat-unconfirmed-passes">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-xl-2 mb-3">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-dark-50">Pendientes de Confirmar</h6>
+                    <h2 class="mb-0" id="stat-pending-passes">0</h2>
                 </div>
             </div>
         </div>
@@ -470,9 +494,23 @@
     }
 
     function updateStats() {
+        const totalPasses = guestsData.reduce((sum, g) => sum + (parseInt(g.max_companions, 10) || 0), 0);
+        const confirmedPasses = guestsData.reduce((sum, g) => {
+            if (!g.has_responded || !g.is_attending) return sum;
+            return sum + (parseInt(g.confirmed_companions, 10) || 0);
+        }, 0);
+        const pendingPasses = guestsData.reduce((sum, g) => {
+            if (g.has_responded) return sum;
+            return sum + (parseInt(g.max_companions, 10) || 0);
+        }, 0);
+        const unconfirmedPasses = Math.max(totalPasses - confirmedPasses - pendingPasses, 0);
+
         document.getElementById('stat-total').innerText = guestsData.length;
         document.getElementById('stat-attending').innerText = guestsData.filter(g => g.has_responded && g.is_attending).length;
-        document.getElementById('stat-passes').innerText = guestsData.reduce((sum, g) => sum + g.max_companions, 0);
+        document.getElementById('stat-passes').innerText = totalPasses;
+        document.getElementById('stat-confirmed-passes').innerText = confirmedPasses;
+        document.getElementById('stat-unconfirmed-passes').innerText = unconfirmedPasses;
+        document.getElementById('stat-pending-passes').innerText = pendingPasses;
     }
 
     // Search filter
