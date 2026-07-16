@@ -1,0 +1,586 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Recepción - {{ invitation.host_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #f6f7fb;
+    }
+    .navbar .container {
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
+    }
+    .navbar-brand {
+        font-size: 0.95rem;
+    }
+    .navbar .me-3 {
+        display: none;
+    }
+    .reception-hero {
+        background: #fff;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0.95rem 0;
+        position: sticky;
+        top: 0;
+        z-index: 25;
+    }
+    .reception-title {
+        color: #212529;
+        font-size: 1.05rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0;
+    }
+    .reception-subtitle {
+        color: #6c757d;
+        font-size: 0.82rem;
+        margin: 0.15rem 0 0;
+    }
+    .reception-shell {
+        padding-bottom: 5rem;
+    }
+    .scanner-box,
+    .guest-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+    }
+    .scanner-box {
+        padding: 0.85rem;
+    }
+    .reception-actions,
+    .stats-strip,
+    .guest-data-grid {
+        display: grid;
+        gap: 0.55rem;
+    }
+    .reception-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin: 0.85rem 0;
+    }
+    .action-btn {
+        align-items: center;
+        display: inline-flex;
+        font-size: 0.86rem;
+        font-weight: 600;
+        gap: 0.35rem;
+        justify-content: center;
+        min-height: 44px;
+    }
+    .reception-actions .action-btn:only-child {
+        grid-column: 1 / -1;
+    }
+    .stats-strip {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-bottom: 0.85rem;
+    }
+    .stat-tile {
+        border: 0;
+        border-radius: 8px;
+        min-height: 78px;
+        padding: 0.7rem;
+    }
+    .stat-label {
+        display: block;
+        font-size: 0.68rem;
+        line-height: 1.15;
+        margin-bottom: 0.3rem;
+        opacity: 0.78;
+    }
+    .stat-value {
+        font-size: 1.35rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .scan-panel {
+        margin-bottom: 0.85rem;
+    }
+    .scan-heading {
+        align-items: center;
+        display: flex;
+        gap: 0.6rem;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+    }
+    .scan-title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    .scan-primary-btn {
+        min-height: 44px;
+        white-space: nowrap;
+    }
+    #qrReader {
+        background: #f8f9fa;
+        min-height: 220px;
+        overflow: hidden;
+        border-radius: 8px;
+    }
+    .manual-panel {
+        margin-bottom: 0.85rem;
+    }
+    .search-panel {
+        margin-bottom: 0.85rem;
+        position: sticky;
+        top: 72px;
+        z-index: 20;
+    }
+    .guest-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+    .guest-card {
+        padding: 0.85rem;
+    }
+    .guest-head {
+        align-items: flex-start;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+    }
+    .guest-name {
+        color: #212529;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.25;
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+    .guest-meta {
+        color: #6c757d;
+        font-size: 0.82rem;
+        overflow-wrap: anywhere;
+    }
+    .guest-data-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-top: 0.75rem;
+    }
+    .guest-data-box {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 0.58rem;
+    }
+    .guest-data-label {
+        color: #6c757d;
+        display: block;
+        font-size: 0.68rem;
+        line-height: 1.15;
+        margin-bottom: 0.18rem;
+    }
+    .guest-data-value {
+        color: #212529;
+        font-size: 0.92rem;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+    }
+    .status-pill {
+        align-items: center;
+        display: inline-flex;
+        gap: 0.25rem;
+        line-height: 1.15;
+        max-width: 8.5rem;
+        white-space: nowrap;
+    }
+    .validate-btn {
+        font-weight: 700;
+        min-height: 44px;
+    }
+    .empty-state {
+        background: #fff;
+        border: 1px dashed #ced4da;
+        border-radius: 8px;
+        color: #6c757d;
+        padding: 2rem 1rem;
+        text-align: center;
+    }
+    @media (max-width: 575.98px) {
+        .reception-hero {
+            padding: 0.75rem 0;
+        }
+        .reception-shell {
+            padding-left: 0.9rem;
+            padding-right: 0.9rem;
+        }
+        .stats-strip {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .stat-tile:last-child {
+            grid-column: 1 / -1;
+        }
+        .scan-heading {
+            align-items: stretch;
+            flex-direction: column;
+        }
+        .scan-primary-btn {
+            width: 100%;
+        }
+        #qrReader {
+            min-height: 250px;
+        }
+        .guest-head {
+            flex-direction: column;
+        }
+        .status-pill {
+            max-width: 100%;
+        }
+    }
+    @media (min-width: 992px) {
+        .navbar .me-3 {
+            display: inline-block;
+        }
+        .reception-hero {
+            position: static;
+        }
+        .search-panel {
+            top: 0;
+        }
+        .scanner-box {
+            padding: 1rem;
+        }
+        .guest-card {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reception-hero">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+            <div>
+                <h1 class="reception-title">Recepción</h1>
+                <p class="reception-subtitle">{{ invitation.host_name }}</p>
+            </div>
+            <span class="badge text-bg-light border" id="visibleCount">0 visibles</span>
+        </div>
+    </div>
+</div>
+
+<main class="container reception-shell">
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" id="csrfToken">
+
+    <div class="reception-actions">
+        {% if can_manage_guests %}
+        <a href="{% url 'rsvp:guest_dashboard' invitation.slug %}" class="btn btn-outline-secondary action-btn">
+            <i class="bi bi-people-fill"></i><span>Gestor</span>
+        </a>
+        {% endif %}
+        <a href="/{{ invitation.slug }}/" target="_blank" class="btn btn-outline-secondary action-btn">
+            <i class="bi bi-box-arrow-up-right"></i><span>Invitación</span>
+        </a>
+    </div>
+
+    <section class="stats-strip" aria-label="Resumen de recepción">
+        <div class="stat-tile bg-primary text-white">
+            <span class="stat-label">Total</span>
+            <span class="stat-value" id="statTotal">0</span>
+        </div>
+        <div class="stat-tile bg-success text-white">
+            <span class="stat-label">Entradas</span>
+            <span class="stat-value" id="statChecked">0</span>
+        </div>
+        <div class="stat-tile bg-warning text-dark">
+            <span class="stat-label">Pendientes</span>
+            <span class="stat-value" id="statPending">0</span>
+        </div>
+    </section>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <section class="scanner-box scan-panel">
+                <div class="scan-heading">
+                    <h2 class="scan-title">Escanear QR</h2>
+                    <button type="button" class="btn btn-outline-primary scan-primary-btn" id="toggleScannerBtn" onclick="toggleScanner()">
+                        <i class="bi bi-camera"></i> Iniciar
+                    </button>
+                </div>
+                <div id="qrReader"></div>
+                <div class="form-text mt-2">Si la cámara no está disponible, usa validación manual.</div>
+            </section>
+
+            <section class="scanner-box manual-panel">
+                <h2 class="scan-title mb-3">Validación manual</h2>
+                <div class="mb-3">
+                    <label for="manualTokenInput" class="form-label">URL, token o búsqueda</label>
+                    <input type="text" class="form-control form-control-lg" id="manualTokenInput" placeholder="Pega URL/token o busca por nombre">
+                </div>
+                <button type="button" class="btn btn-primary w-100 validate-btn" onclick="checkInManualValue()">
+                    <i class="bi bi-check2-circle"></i> Validar entrada
+                </button>
+            </section>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="scanner-box search-panel">
+                <label for="searchInput" class="form-label">Buscar invitado</label>
+                <input type="search" class="form-control form-control-lg" id="searchInput" placeholder="Nombre, alias o teléfono" autocomplete="off">
+            </div>
+            <section class="guest-list" id="guestList" aria-live="polite">
+                <div class="guest-card text-muted">Cargando invitados...</div>
+            </section>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script>
+    const GUESTS_URL = '/api/{{ invitation.slug }}/hostess/guests/';
+    const CHECK_IN_URL = '/api/{{ invitation.slug }}/hostess/check-in/';
+    let guestsData = [];
+    let searchText = '';
+    let qrScanner = null;
+    let scannerRunning = false;
+    let lastQrValue = '';
+    let lastQrAt = 0;
+
+    document.addEventListener('DOMContentLoaded', loadGuests);
+    document.getElementById('searchInput').addEventListener('input', (event) => {
+        searchText = event.target.value;
+        renderGuests();
+    });
+    document.getElementById('manualTokenInput').addEventListener('input', (event) => {
+        document.getElementById('searchInput').value = event.target.value;
+        searchText = event.target.value;
+        renderGuests();
+    });
+
+    function getCsrfToken() {
+        return document.getElementById('csrfToken').value;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    function formatDate(value) {
+        if (!value) return '';
+        return new Date(value).toLocaleString('es-MX', {dateStyle: 'medium', timeStyle: 'short'});
+    }
+
+    async function loadGuests() {
+        try {
+            const response = await fetch(GUESTS_URL);
+            if (!response.ok) throw new Error('Error loading guests');
+            guestsData = await response.json();
+            renderGuests();
+            updateStats();
+        } catch (error) {
+            Swal.fire('Error', 'No se pudo cargar la lista de invitados.', 'error');
+        }
+    }
+
+    function updateStats() {
+        const checked = guestsData.filter(guest => guest.checked_in_at).length;
+        document.getElementById('statTotal').innerText = guestsData.length;
+        document.getElementById('statChecked').innerText = checked;
+        document.getElementById('statPending').innerText = Math.max(guestsData.length - checked, 0);
+    }
+
+    function getFilteredGuests() {
+        const text = searchText.toLowerCase().trim();
+        if (!text) return guestsData;
+        return guestsData.filter(guest => {
+            const name = String(guest.name || '').toLowerCase();
+            const alias = String(guest.alias || '').toLowerCase();
+            const phone = String(guest.phone_number || '');
+            return name.includes(text) || alias.includes(text) || phone.includes(searchText);
+        });
+    }
+
+    function renderGuests() {
+        const list = document.getElementById('guestList');
+        const guests = getFilteredGuests();
+        const visibleCount = document.getElementById('visibleCount');
+        list.innerHTML = '';
+        if (visibleCount) {
+            visibleCount.textContent = `${guests.length} visibles`;
+        }
+
+        if (guests.length === 0) {
+            list.innerHTML = '<div class="empty-state">No se encontraron invitados.</div>';
+            return;
+        }
+
+        guests.forEach(guest => {
+            const checked = Boolean(guest.checked_in_at);
+            const responseStatus = guest.has_responded
+                ? (guest.is_attending ? 'Confirmado' : 'No asistirá')
+                : 'Sin respuesta';
+            const responseClass = guest.has_responded ? (guest.is_attending ? 'text-success' : 'text-danger') : 'text-muted';
+            const checkedBadge = checked
+                ? '<span class="badge bg-success status-pill"><i class="bi bi-check-circle"></i> Entrada validada</span>'
+                : '<span class="badge bg-secondary status-pill">Pendiente</span>';
+
+            list.insertAdjacentHTML('beforeend', `
+                <article class="guest-card">
+                    <div class="guest-head">
+                        <div>
+                            <h3 class="guest-name">${escapeHtml(guest.name)}</h3>
+                            ${guest.alias ? `<div class="guest-meta">Alias: ${escapeHtml(guest.alias)}</div>` : ''}
+                            <div class="guest-meta">${guest.phone_number ? escapeHtml(guest.phone_number) : 'Sin teléfono'}</div>
+                        </div>
+                        ${checkedBadge}
+                    </div>
+                    <div class="guest-data-grid">
+                        <div class="guest-data-box">
+                            <span class="guest-data-label">Pases</span>
+                            <span class="guest-data-value">${escapeHtml(guest.max_companions)}</span>
+                        </div>
+                        <div class="guest-data-box">
+                            <span class="guest-data-label">Confirmados</span>
+                            <span class="guest-data-value">${escapeHtml(guest.confirmed_companions)}</span>
+                        </div>
+                        <div class="guest-data-box">
+                            <span class="guest-data-label">RSVP</span>
+                            <span class="guest-data-value ${responseClass}">${responseStatus}</span>
+                        </div>
+                        <div class="guest-data-box">
+                            <span class="guest-data-label">Entrada</span>
+                            <span class="guest-data-value">${checked ? formatDate(guest.checked_in_at) : '-'}</span>
+                        </div>
+                    </div>
+                    ${checked && guest.checked_in_by_name ? `<div class="guest-meta mt-2">Validado por ${escapeHtml(guest.checked_in_by_name)} (${escapeHtml(guest.check_in_method || 'manual')})</div>` : ''}
+                    <button type="button" class="btn ${checked ? 'btn-outline-secondary' : 'btn-success'} validate-btn w-100 mt-3" onclick="checkInGuest(${guest.id}, 'manual')" ${checked ? 'disabled' : ''}>
+                        <i class="bi bi-check2-circle"></i> ${checked ? 'Ya validado' : 'Validar entrada'}
+                    </button>
+                </article>
+            `);
+        });
+    }
+
+    async function checkInGuest(guestId, method = 'manual') {
+        await sendCheckIn({guest_id: guestId, method: method});
+    }
+
+    async function checkInManualValue() {
+        const value = document.getElementById('manualTokenInput').value.trim();
+        if (!value) {
+            Swal.fire('Atención', 'Ingresa una URL, token o selecciona un invitado de la lista.', 'warning');
+            return;
+        }
+        await sendCheckIn({token_or_url: value, method: 'manual'});
+    }
+
+    function getGuestResultHtml(guest) {
+        const responseStatus = guest.has_responded
+            ? (guest.is_attending ? 'Confirmado' : 'No asistirá')
+            : 'Sin respuesta';
+        const checkedText = guest.checked_in_at ? formatDate(guest.checked_in_at) : '-';
+
+        return `
+            <div class="text-start">
+                <div><strong>Invitado:</strong> ${escapeHtml(guest.name)}</div>
+                ${guest.alias ? `<div><strong>Alias:</strong> ${escapeHtml(guest.alias)}</div>` : ''}
+                <div><strong>RSVP:</strong> ${escapeHtml(responseStatus)}</div>
+                <div><strong>Pases confirmados:</strong> ${escapeHtml(guest.confirmed_companions)}</div>
+                <div><strong>Entrada:</strong> ${escapeHtml(checkedText)}</div>
+                ${guest.checked_in_by_name ? `<div><strong>Validado por:</strong> ${escapeHtml(guest.checked_in_by_name)}</div>` : ''}
+            </div>
+        `;
+    }
+
+    function showCheckInResult(data) {
+        const title = data.status === 'duplicate' ? 'Entrada duplicada' : 'Entrada validada';
+        const icon = data.status === 'duplicate' ? 'warning' : 'success';
+        const guestHtml = data.guest ? getGuestResultHtml(data.guest) : '';
+
+        Swal.fire({
+            title: title,
+            html: `<p>${escapeHtml(data.message || '')}</p>${guestHtml}`,
+            icon: icon,
+            confirmButtonText: 'Aceptar'
+        });
+    }
+
+    async function sendCheckIn(payload) {
+        try {
+            const response = await fetch(CHECK_IN_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                const title = response.status === 403 ? 'Entrada no permitida' : 'No encontrado';
+                Swal.fire(title, data.message || 'No se pudo validar la entrada.', 'error');
+                return;
+            }
+
+            if (data.guest) {
+                const index = guestsData.findIndex(guest => String(guest.id) === String(data.guest.id));
+                if (index >= 0) guestsData[index] = data.guest;
+            }
+
+            renderGuests();
+            updateStats();
+            document.getElementById('manualTokenInput').value = '';
+            if (payload.token_or_url) {
+                document.getElementById('searchInput').value = '';
+                searchText = '';
+                renderGuests();
+            }
+
+            showCheckInResult(data);
+        } catch (error) {
+            Swal.fire('Error', 'No se pudo validar la entrada.', 'error');
+        }
+    }
+
+    async function toggleScanner() {
+        if (scannerRunning) {
+            await stopScanner();
+        } else {
+            await startScanner();
+        }
+    }
+
+    async function startScanner() {
+        if (!window.Html5Qrcode) {
+            Swal.fire('Error', 'No se pudo cargar el lector QR.', 'error');
+            return;
+        }
+
+        qrScanner = new Html5Qrcode('qrReader');
+        try {
+            await qrScanner.start(
+                {facingMode: 'environment'},
+                {fps: 10, qrbox: {width: 240, height: 240}},
+                async (decodedText) => {
+                    const now = Date.now();
+                    if (decodedText === lastQrValue && now - lastQrAt < 3000) return;
+                    lastQrValue = decodedText;
+                    lastQrAt = now;
+                    await sendCheckIn({token_or_url: decodedText, method: 'qr'});
+                }
+            );
+            scannerRunning = true;
+            document.getElementById('toggleScannerBtn').innerHTML = '<i class="bi bi-camera-video-off"></i> Detener';
+        } catch (error) {
+            Swal.fire('Cámara no disponible', 'No se pudo iniciar el escáner. Usa la validación manual.', 'warning');
+        }
+    }
+
+    async function stopScanner() {
+        if (!qrScanner) return;
+        await qrScanner.stop();
+        qrScanner.clear();
+        scannerRunning = false;
+        document.getElementById('toggleScannerBtn').innerHTML = '<i class="bi bi-camera"></i> Iniciar';
+    }
+</script>
+{% endblock %}

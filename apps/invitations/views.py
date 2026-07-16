@@ -17,9 +17,11 @@ def invitation_detail(request, slug):
     
     guest_token = request.GET.get('guest')
     current_guest = None
+    guest_invitation_url = ''
     if guest_token:
         try:
             current_guest = Guest.objects.get(token=guest_token, invitation=invitation)
+            guest_invitation_url = request.build_absolute_uri(f'/{invitation.slug}/?guest={current_guest.token}')
             GuestVisit.objects.create(
                 invitation=invitation,
                 guest=current_guest,
@@ -64,5 +66,6 @@ def invitation_detail(request, slug):
         'rsvp_expired': rsvp_expired,
         'effective_deadline': effective_deadline,
         'ordered_sections': ordered_sections,
+        'guest_invitation_url': guest_invitation_url,
     }
     return render(request, template_name, context)

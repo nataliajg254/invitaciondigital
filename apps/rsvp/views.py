@@ -1,9 +1,13 @@
 import json
+import uuid
+from urllib.parse import parse_qs, urlparse
 from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.template.loader import get_template
 from django.conf import settings
 from django.utils import timezone
@@ -78,6 +82,8 @@ def submit_rsvp(request, slug):
         'status': 'success',
         'message': '¡Gracias por confirmar tu asistencia!',
         'guest': {
+            'name': guest_obj.name,
+            'alias': guest_obj.alias or '',
             'has_responded': guest_obj.has_responded,
             'is_attending': guest_obj.is_attending,
             'confirmed_companions': guest_obj.confirmed_companions,
@@ -137,14 +143,43 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from functools import wraps
 
+ADMIN_GROUP_NAME = 'Administrador de invitaciones'
+HOSTESS_GROUP_NAME = 'Hostess / Recepcionista'
+
+
+def user_is_invitation_admin(user, invitation):
+    if not user.is_authenticated:
+        return False
+    if user.is_staff or user.is_superuser:
+        return True
+    return invitation.administrators.filter(pk=user.pk).exists()
+
+
+def user_is_invitation_hostess(user, invitation):
+    if not user.is_authenticated:
+        return False
+    if user_is_invitation_admin(user, invitation):
+        return True
+    return invitation.hostesses.filter(pk=user.pk).exists()
+
 def check_invitation_access(view_func):
     @login_required
     @wraps(view_func)
     def _wrapped_view(request, slug, *args, **kwargs):
         invitation = get_object_or_404(Invitation, slug=slug)
-        has_access = invitation.administrators.filter(pk=request.user.pk).exists()
-        if not request.user.is_staff and not has_access:
+        if not user_is_invitation_admin(request.user, invitation):
             raise PermissionDenied("No tienes permiso para administrar esta invitación.")
+        return view_func(request, slug, *args, **kwargs)
+    return _wrapped_view
+
+
+def check_reception_access(view_func):
+    @login_required
+    @wraps(view_func)
+    def _wrapped_view(request, slug, *args, **kwargs):
+        invitation = get_object_or_404(Invitation, slug=slug)
+        if not user_is_invitation_hostess(request.user, invitation):
+            raise PermissionDenied("No tienes permiso para validar entradas de esta invitación.")
         return view_func(request, slug, *args, **kwargs)
     return _wrapped_view
 
@@ -182,6 +217,16 @@ def guest_dashboard(request, slug):
     return render(request, template_name, {'invitation': invitation})
 
 
+@check_reception_access
+@ensure_csrf_cookie
+def hostess_dashboard(request, slug):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    return render(request, 'rsvp_hostess_dashboard.html', {
+        'invitation': invitation,
+        'can_manage_guests': user_is_invitation_admin(request.user, invitation),
+    })
+
+
 @check_invitation_access
 @require_http_methods(["GET", "POST"])
 def api_guests_list_create(request, slug):
@@ -202,6 +247,9 @@ def api_guests_list_create(request, slug):
             'sheet_name': g.sheet_name,
             'whatsapp_sent': g.whatsapp_sent,
             'visit_count': g.visit_count,
+            'checked_in_at': g.checked_in_at.isoformat() if g.checked_in_at else None,
+            'checked_in_by_name': g.checked_in_by.get_username() if g.checked_in_by else '',
+            'check_in_method': g.check_in_method,
         } for g in guests]
         return JsonResponse(data, safe=False)
         
@@ -406,4 +454,168 @@ def api_upload_excel_guests(request, slug):
     return JsonResponse({
         'status': 'success', 
         'message': f'Importación completada: {created_count} creados, {updated_count} actualizados.'
+    })
+
+
+@check_invitation_access
+@require_http_methods(["GET", "POST"])
+def api_hostesses_list_create(request, slug):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    User = get_user_model()
+
+    if request.method == "GET":
+        data = [{
+            'id': user.id,
+            'username': user.get_username(),
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+        } for user in invitation.hostesses.order_by('username')]
+        return JsonResponse(data, safe=False)
+
+    try:
+        body = json.loads(request.body)
+        username = (body.get('username') or '').strip()
+        password = body.get('password') or ''
+        first_name = (body.get('first_name') or '').strip()
+        last_name = (body.get('last_name') or '').strip()
+
+        if not username:
+            return JsonResponse({'status': 'error', 'message': 'El usuario es obligatorio.'}, status=400)
+
+        user = User.objects.filter(username=username).first()
+        created = False
+        if user is None:
+            if not password:
+                return JsonResponse({'status': 'error', 'message': 'La contraseña temporal es obligatoria para usuarios nuevos.'}, status=400)
+            user = User.objects.create_user(username=username, password=password, first_name=first_name, last_name=last_name)
+            created = True
+        else:
+            if first_name:
+                user.first_name = first_name
+            if last_name:
+                user.last_name = last_name
+            if first_name or last_name:
+                user.save(update_fields=['first_name', 'last_name'])
+
+        hostess_group, _ = Group.objects.get_or_create(name=HOSTESS_GROUP_NAME)
+        user.groups.add(hostess_group)
+        invitation.hostesses.add(user)
+
+        return JsonResponse({
+            'status': 'success',
+            'created': created,
+            'hostess': {
+                'id': user.id,
+                'username': user.get_username(),
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+            },
+        }, status=201 if created else 200)
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'JSON inválido.'}, status=400)
+
+
+@check_invitation_access
+@require_http_methods(["DELETE"])
+def api_hostess_detail(request, slug, user_id):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    User = get_user_model()
+    user = get_object_or_404(User, pk=user_id)
+    invitation.hostesses.remove(user)
+    return JsonResponse({'status': 'success'}, status=200)
+
+
+def serialize_reception_guest(guest):
+    return {
+        'id': guest.id,
+        'name': guest.name,
+        'alias': guest.alias,
+        'phone_number': guest.phone_number,
+        'max_companions': guest.max_companions,
+        'has_responded': guest.has_responded,
+        'is_attending': guest.is_attending,
+        'confirmed_companions': guest.confirmed_companions,
+        'checked_in_at': guest.checked_in_at.isoformat() if guest.checked_in_at else None,
+        'checked_in_by_name': guest.checked_in_by.get_username() if guest.checked_in_by else '',
+        'check_in_method': guest.check_in_method,
+    }
+
+
+def extract_guest_token(raw_value):
+    value = (raw_value or '').strip()
+    if not value:
+        return None
+
+    parsed = urlparse(value)
+    query = parse_qs(parsed.query)
+    if query.get('guest'):
+        value = query['guest'][0]
+
+    try:
+        return uuid.UUID(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+@check_reception_access
+@require_http_methods(["GET"])
+def api_hostess_guests(request, slug):
+    invitation = get_object_or_404(Invitation, slug=slug)
+    guests = Guest.objects.filter(
+        invitation=invitation,
+        has_responded=True,
+        is_attending=True,
+    ).order_by('name')
+    return JsonResponse([serialize_reception_guest(guest) for guest in guests], safe=False)
+
+
+@check_reception_access
+@require_http_methods(["POST"])
+def api_hostess_check_in(request, slug):
+    invitation = get_object_or_404(Invitation, slug=slug)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'JSON inválido.'}, status=400)
+
+    guest = None
+    method = body.get('method') or 'manual'
+    notes = body.get('notes') or ''
+
+    guest_id = body.get('guest_id')
+    if guest_id:
+        guest = Guest.objects.filter(invitation=invitation, pk=guest_id).first()
+    else:
+        token = extract_guest_token(body.get('token_or_url') or body.get('token'))
+        if token:
+            guest = Guest.objects.filter(invitation=invitation, token=token).first()
+
+    if guest is None:
+        return JsonResponse({'status': 'error', 'message': 'No se encontró un invitado válido para esta invitación.'}, status=404)
+
+    if not guest.has_responded or not guest.is_attending:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'No se permite la entrada porque este invitado no hizo la confirmación correspondiente.',
+            'guest': serialize_reception_guest(guest),
+        }, status=403)
+
+    if guest.checked_in_at:
+        return JsonResponse({
+            'status': 'duplicate',
+            'message': 'Este invitado ya fue validado previamente.',
+            'guest': serialize_reception_guest(guest),
+        }, status=200)
+
+    guest.checked_in_at = timezone.now()
+    guest.checked_in_by = request.user
+    guest.check_in_method = 'qr' if method == 'qr' else 'manual'
+    guest.check_in_notes = notes
+    guest.save(update_fields=['checked_in_at', 'checked_in_by', 'check_in_method', 'check_in_notes', 'updated_at'])
+
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Entrada validada correctamente.',
+        'guest': serialize_reception_guest(guest),
     })

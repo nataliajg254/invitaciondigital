@@ -25,12 +25,32 @@ class Guest(models.Model):
     is_attending = models.BooleanField(default=False, verbose_name="¿Asistirá?")
     confirmed_companions = models.PositiveIntegerField(default=0, verbose_name="Acompañantes Confirmados")
     dietary_restrictions = models.TextField(blank=True, verbose_name="Restricciones Alimenticias / Mensaje")
+
+    CHECK_IN_METHOD_CHOICES = [
+        ('qr', 'QR'),
+        ('manual', 'Manual'),
+    ]
+    checked_in_at = models.DateTimeField(blank=True, null=True, verbose_name="Fecha de entrada")
+    checked_in_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='checked_in_guests',
+        verbose_name="Validado por",
+    )
+    check_in_method = models.CharField(max_length=10, choices=CHECK_IN_METHOD_CHOICES, blank=True, verbose_name="Método de validación")
+    check_in_notes = models.TextField(blank=True, verbose_name="Notas de recepción")
     
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de creación")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Última actualización")
 
     class Meta:
         ordering = ['name']
+        permissions = [
+            ('view_reception_guest_list', 'Puede ver lista de invitados en recepción'),
+            ('check_in_guest', 'Puede validar entrada de invitados'),
+        ]
         verbose_name = "Invitado"
         verbose_name_plural = "Lista de Invitados"
 

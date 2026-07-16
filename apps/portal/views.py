@@ -8,7 +8,10 @@ def portal_dashboard(request):
         # El staff ve todas las invitaciones
         invitations = Invitation.objects.all().order_by('-event_date')
     else:
-        # El cliente ve solo las suyas
-        invitations = Invitation.objects.filter(owner=request.user).order_by('-event_date')
+        # El cliente ve solo las invitaciones que administra o atiende en recepción
+        invitations = (
+            Invitation.objects.filter(administrators=request.user)
+            | Invitation.objects.filter(hostesses=request.user)
+        ).distinct().order_by('-event_date')
         
     return render(request, 'portal/dashboard.html', {'invitations': invitations})

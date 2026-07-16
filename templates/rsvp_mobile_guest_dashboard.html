@@ -48,7 +48,7 @@
     }
     .quick-actions,
     .guest-actions {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .stats-strip {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -181,6 +181,9 @@
         <a href="/{{ invitation.slug }}/" target="_blank" class="btn btn-outline-secondary quick-action">
             <i class="bi bi-box-arrow-up-right"></i><span>Ver</span>
         </a>
+        <a href="{% url 'rsvp:hostess_dashboard' invitation.slug %}" class="btn btn-outline-primary quick-action">
+            <i class="bi bi-qr-code-scan"></i><span>Recepción</span>
+        </a>
         <div class="dropdown">
             <button class="btn btn-outline-success quick-action w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-file-earmark-excel"></i><span>Excel</span>
@@ -192,6 +195,9 @@
         </div>
         <button class="btn btn-primary quick-action" type="button" onclick="openGuestModal()">
             <i class="bi bi-plus-lg"></i><span>Añadir</span>
+        </button>
+        <button class="btn btn-outline-dark quick-action" type="button" onclick="openHostessesModal()">
+            <i class="bi bi-person-badge"></i><span>Hostesses</span>
         </button>
     </div>
 
@@ -320,17 +326,52 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="hostessesModal" tabindex="-1" aria-labelledby="hostessesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="hostessesModalLabel">Hostesses</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="hostessForm" class="mb-4">
+                    <div class="mb-3">
+                        <label for="hostessUsername" class="form-label">Usuario</label>
+                        <input type="text" class="form-control form-control-lg" id="hostessUsername" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="hostessFirstName" class="form-label">Nombre</label>
+                        <input type="text" class="form-control form-control-lg" id="hostessFirstName">
+                    </div>
+                    <div class="mb-3">
+                        <label for="hostessPassword" class="form-label">Contraseña temporal</label>
+                        <input type="password" class="form-control form-control-lg" id="hostessPassword">
+                        <div class="form-text">Obligatoria solo si el usuario no existe.</div>
+                    </div>
+                    <button type="button" class="btn btn-primary w-100" id="saveHostessBtn" onclick="saveHostess()">Asignar Hostess</button>
+                </form>
+                <div id="hostessesList" class="list-group">
+                    <div class="list-group-item text-muted">Cargando hostesses...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     const API_URL = '/api/{{ invitation.slug }}/guests/';
     const WHATSAPP_MESSAGES_URL = '/api/{{ invitation.slug }}/whatsapp-messages/';
+    const HOSTESSES_URL = '/api/{{ invitation.slug }}/hostesses/';
     const guestModal = new bootstrap.Modal(document.getElementById('guestModal'));
     const whatsappMessageModal = new bootstrap.Modal(document.getElementById('whatsappMessageModal'));
+    const hostessesModal = new bootstrap.Modal(document.getElementById('hostessesModal'));
     let guestsData = [];
     let whatsappMessagesData = null;
     let selectedWhatsAppGuestId = null;
+    let hostessesData = [];
     let currentFilterText = '';
     let currentStatusFilter = 'all';
     let currentSheetFilter = 'all';
@@ -662,6 +703,105 @@
     });
 
     document.getElementById('whatsappMessageSelect').addEventListener('change', updateWhatsAppMessagePreview);
+
+    async function openHostessesModal() {
+        document.getElementById('hostessForm').reset();
+        hostessesModal.show();
+        await loadHostesses();
+    }
+
+    async function loadHostesses() {
+        const list = document.getElementById('hostessesList');
+        list.innerHTML = '<div class="list-group-item text-muted">Cargando hostesses...</div>';
+        try {
+            const response = await fetch(HOSTESSES_URL);
+            if (!response.ok) throw new Error('Error loading hostesses');
+            hostessesData = await response.json();
+            renderHostesses();
+        } catch (error) {
+            list.innerHTML = '<div class="list-group-item text-danger">No se pudieron cargar las hostesses.</div>';
+        }
+    }
+
+    function renderHostesses() {
+        const list = document.getElementById('hostessesList');
+        if (hostessesData.length === 0) {
+            list.innerHTML = '<div class="list-group-item text-muted">Aún no hay hostesses asignadas.</div>';
+            return;
+        }
+
+        list.innerHTML = '';
+        hostessesData.forEach(hostess => {
+            const name = `${hostess.first_name || ''} ${hostess.last_name || ''}`.trim();
+            list.insertAdjacentHTML('beforeend', `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${escapeHtml(hostess.username)}</strong>
+                        ${name ? `<div class="small text-muted">${escapeHtml(name)}</div>` : ''}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeHostess(${hostess.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `);
+        });
+    }
+
+    async function saveHostess() {
+        const username = document.getElementById('hostessUsername').value.trim();
+        const firstName = document.getElementById('hostessFirstName').value.trim();
+        const password = document.getElementById('hostessPassword').value;
+        const btn = document.getElementById('saveHostessBtn');
+
+        if (!username) {
+            Swal.fire('Atención', 'El usuario es obligatorio.', 'warning');
+            return;
+        }
+
+        btn.disabled = true;
+        try {
+            const response = await fetch(HOSTESSES_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({username: username, first_name: firstName, password: password})
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Error saving hostess');
+            document.getElementById('hostessForm').reset();
+            Swal.fire('Listo', data.created ? 'Hostess creada y asignada.' : 'Hostess asignada.', 'success');
+            await loadHostesses();
+        } catch (error) {
+            Swal.fire('Error', error.message || 'No se pudo asignar la hostess.', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function removeHostess(userId) {
+        Swal.fire({
+            title: '¿Quitar hostess?',
+            text: 'La usuaria dejará de tener acceso de recepción a esta invitación.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, quitar',
+            cancelButtonText: 'Cancelar'
+        }).then(async (result) => {
+            if (!result.isConfirmed) return;
+            try {
+                const response = await fetch(`${HOSTESSES_URL}${userId}/`, {
+                    method: 'DELETE',
+                    headers: {'X-CSRFToken': getCsrfToken()}
+                });
+                if (!response.ok) throw new Error('Error removing hostess');
+                await loadHostesses();
+            } catch (error) {
+                Swal.fire('Error', 'No se pudo quitar la hostess.', 'error');
+            }
+        });
+    }
 
     function openGuestModal() {
         document.getElementById('guestForm').reset();

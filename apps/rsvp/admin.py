@@ -20,10 +20,10 @@ def normalize_whatsapp_phone(phone_number):
 
 @admin.register(Guest)
 class GuestAdmin(admin.ModelAdmin):
-    list_display = ('name', 'alias', 'phone_number', 'max_companions', 'whatsapp_sent', 'is_attending', 'has_responded', 'whatsapp_link', 'pdf_link')
-    list_filter = ('whatsapp_sent', 'has_responded', 'is_attending', 'is_public_rsvp', 'invitation')
+    list_display = ('name', 'alias', 'phone_number', 'max_companions', 'whatsapp_sent', 'is_attending', 'has_responded', 'checked_in_at', 'whatsapp_link', 'pdf_link')
+    list_filter = ('whatsapp_sent', 'has_responded', 'is_attending', 'checked_in_at', 'is_public_rsvp', 'invitation')
     search_fields = ('name', 'alias', 'phone_number')
-    readonly_fields = ('token', 'has_responded', 'is_attending', 'confirmed_companions', 'dietary_restrictions', 'created_at', 'is_public_rsvp')
+    readonly_fields = ('token', 'has_responded', 'is_attending', 'confirmed_companions', 'dietary_restrictions', 'checked_in_at', 'checked_in_by', 'check_in_method', 'check_in_notes', 'created_at', 'is_public_rsvp')
 
     def get_urls(self):
         urls = super().get_urls()
@@ -78,6 +78,10 @@ class GuestAdmin(admin.ModelAdmin):
             }),
             ('Estado de Confirmación', {
                 'fields': ('has_responded', 'is_attending', 'confirmed_companions', 'dietary_restrictions'),
+                'classes': ('collapse',)
+            }),
+            ('Recepción', {
+                'fields': ('checked_in_at', 'checked_in_by', 'check_in_method', 'check_in_notes'),
                 'classes': ('collapse',)
             }),
         )

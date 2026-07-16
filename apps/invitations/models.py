@@ -22,6 +22,13 @@ class Invitation(models.Model):
         verbose_name="Usuarios administradores",
         help_text="Usuarios que pueden administrar esta invitación.",
     )
+    hostesses = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='hostess_invitations',
+        verbose_name="Hostesses / Recepcionistas",
+        help_text="Usuarios que pueden validar entradas en recepción para esta invitación.",
+    )
     
     EVENT_TYPES = [
         ('XV', 'XV Años'),
@@ -113,6 +120,10 @@ class Invitation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        permissions = [
+            ('manage_invitation_guests', 'Puede administrar invitados de una invitación'),
+            ('manage_invitation_hostesses', 'Puede administrar hostesses de una invitación'),
+        ]
         verbose_name = "Invitación"
         verbose_name_plural = "Invitaciones"
 

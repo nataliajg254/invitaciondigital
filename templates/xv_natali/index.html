@@ -502,6 +502,11 @@
                 {% else %}
                     <p class="mb-0 mt-2 fs-5">Gracias a todos los que confirmaron. ¡Nos vemos en la fiesta!</p>
                 {% endif %}
+                {% if current_guest.has_responded and current_guest.is_attending %}
+                <button type="button" id="rsvpQrButton" class="btn btn-success btn-lg hover-lift px-5 py-3 mt-4" data-bs-toggle="modal" data-bs-target="#guestQrModal">
+                    <i class="bi bi-qr-code me-2"></i>Ver código QR
+                </button>
+                {% endif %}
             </div>
         {% else %}
             <div id="rsvpStatusMessage">
@@ -527,9 +532,14 @@
             </div>
             {% endif %}
             
-            <a href="#" id="rsvpOpenButton" class="btn {% if current_guest.has_responded %}btn-outline-light{% else %}btn-primary{% endif %} btn-lg hover-lift px-5 py-3" data-aos="zoom-in" data-aos-delay="200" data-bs-toggle="modal" data-bs-target="#rsvpModal">
-                {% if current_guest.has_responded %}Editar Confirmación{% else %}Confirmar Ahora{% endif %}
-            </a>
+            <div class="d-flex justify-content-center flex-wrap gap-3" data-aos="zoom-in" data-aos-delay="200">
+                <a href="#" id="rsvpOpenButton" class="btn {% if current_guest.has_responded %}btn-outline-light{% else %}btn-primary{% endif %} btn-lg hover-lift px-5 py-3" data-bs-toggle="modal" data-bs-target="#rsvpModal">
+                    {% if current_guest.has_responded %}Editar Confirmación{% else %}Confirmar Ahora{% endif %}
+                </a>
+                <button type="button" id="rsvpQrButton" class="btn btn-success btn-lg hover-lift px-5 py-3 {% if not current_guest.has_responded or not current_guest.is_attending %}d-none{% endif %}" data-bs-toggle="modal" data-bs-target="#guestQrModal">
+                    <i class="bi bi-qr-code me-2"></i>Ver código QR
+                </button>
+            </div>
         {% endif %}
     </div>
 </section>
@@ -577,6 +587,24 @@
             </div>
             <div id="rsvpAlert" class="alert mt-3 d-none" role="alert"></div>
         </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="guestQrModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center" style="color: var(--text-color);">
+      <div class="modal-header">
+        <h5 class="modal-title elegant-font">Pase de entrada</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h6 class="mb-1" id="guestQrName">{{ current_guest.name }}</h6>
+        {% if current_guest.alias %}<p class="text-muted mb-2" id="guestQrAlias">{{ current_guest.alias }}</p>{% else %}<p class="text-muted mb-2 d-none" id="guestQrAlias"></p>{% endif %}
+        <p class="mb-3">Pases confirmados: <strong id="guestQrPasses">{{ current_guest.confirmed_companions }}</strong></p>
+        <div id="guestQrCode" class="d-inline-block bg-white p-3 rounded-3" data-qr-url="{{ guest_invitation_url }}"></div>
+        <p class="small text-muted mt-3 mb-0">Presenta este código en recepción.</p>
       </div>
     </div>
   </div>
@@ -647,17 +675,23 @@
 {% endif %}
 
 {% if invitation.show_rsvp and current_guest %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     const rsvpState = {
         hasResponded: {{ current_guest.has_responded|yesno:"true,false" }},
         isAttending: {{ current_guest.is_attending|yesno:"true,false" }},
         confirmedCompanions: {{ current_guest.confirmed_companions|default:0 }},
-        comments: ''
+        comments: '',
+        guestName: '{{ current_guest.name|escapejs }}',
+        guestAlias: '{{ current_guest.alias|default_if_none:""|escapejs }}',
+        guestUrl: '{{ guest_invitation_url|escapejs }}'
     };
+    let guestQrRendered = false;
 
     function updateRsvpSection() {
         const statusMessage = document.getElementById('rsvpStatusMessage');
         const openButton = document.getElementById('rsvpOpenButton');
+        const qrButton = document.getElementById('rsvpQrButton');
 
         if (statusMessage) {
             if (rsvpState.hasResponded) {
@@ -678,11 +712,46 @@
             openButton.classList.toggle('btn-outline-light', rsvpState.hasResponded);
             openButton.textContent = rsvpState.hasResponded ? 'Editar Confirmación' : 'Confirmar Ahora';
         }
+        if (qrButton) {
+            qrButton.classList.toggle('d-none', !(rsvpState.hasResponded && rsvpState.isAttending));
+        }
 
         const deadlineAction = document.getElementById('rsvpDeadlineAction');
         if (deadlineAction) {
             deadlineAction.textContent = rsvpState.hasResponded ? 'editar tu confirmación' : 'confirmar';
         }
+
+        updateGuestQrDetails();
+    }
+
+    function updateGuestQrDetails() {
+        const nameEl = document.getElementById('guestQrName');
+        const aliasEl = document.getElementById('guestQrAlias');
+        const passesEl = document.getElementById('guestQrPasses');
+
+        if (nameEl) nameEl.textContent = rsvpState.guestName;
+        if (passesEl) passesEl.textContent = rsvpState.confirmedCompanions;
+        if (aliasEl) {
+            aliasEl.textContent = rsvpState.guestAlias;
+            aliasEl.classList.toggle('d-none', !rsvpState.guestAlias);
+        }
+    }
+
+    function renderGuestQr() {
+        const container = document.getElementById('guestQrCode');
+        if (!container || guestQrRendered || !rsvpState.guestUrl) return;
+        if (!window.QRCode) {
+            container.innerHTML = '<span class="text-danger">No se pudo generar el QR.</span>';
+            return;
+        }
+        container.innerHTML = '';
+        new QRCode(container, {
+            text: rsvpState.guestUrl,
+            width: 220,
+            height: 220,
+            correctLevel: QRCode.CorrectLevel.H
+        });
+        guestQrRendered = true;
     }
 
     function syncRsvpFormFromState() {
@@ -778,6 +847,8 @@
                     rsvpState.hasResponded = data.guest.has_responded;
                     rsvpState.isAttending = data.guest.is_attending;
                     rsvpState.confirmedCompanions = data.guest.confirmed_companions;
+                    rsvpState.guestName = data.guest.name || rsvpState.guestName;
+                    rsvpState.guestAlias = data.guest.alias || '';
                     rsvpState.comments = formData.get('comments') || '';
                     updateRsvpSection();
                     syncRsvpFormFromState();
@@ -799,6 +870,11 @@
             btn.disabled = false;
             btn.innerText = 'Enviar Confirmación';
         });
+    });
+
+    document.getElementById('guestQrModal')?.addEventListener('show.bs.modal', function() {
+        updateGuestQrDetails();
+        renderGuestQr();
     });
 </script>
 

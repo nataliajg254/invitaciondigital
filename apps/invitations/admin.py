@@ -57,12 +57,12 @@ class InvitationAdmin(admin.ModelAdmin):
     list_filter = ('event_type', 'event_date', 'template_choice')
     search_fields = ('host_name', 'slug')
     prepopulated_fields = {'slug': ('host_name',)}
-    filter_horizontal = ('administrators',)
+    filter_horizontal = ('administrators', 'hostesses')
     inlines = [InvitationWhatsAppMessageInline, ProgramEventInline, SponsorInline, ParentInline, GiftRegistryInline, SeparatorImageInline]
     
     fieldsets = (
         ('Información Principal', {
-            'fields': ('host_name', 'slug', 'event_type', 'template_choice', 'administrators')
+            'fields': ('host_name', 'slug', 'event_type', 'template_choice', 'administrators', 'hostesses')
         }),
         ('Fecha y Hora', {
             'fields': ('event_date', 'event_time', 'rsvp_deadline')

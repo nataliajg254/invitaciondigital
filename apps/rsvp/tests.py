@@ -3,10 +3,12 @@ from io import StringIO
 import uuid
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from invitations.models import Invitation, InvitationWhatsAppMessage
 from rsvp.admin import normalize_whatsapp_phone
@@ -24,6 +26,7 @@ class RsvpFlowTests(TestCase):
         )
         self.manager = User.objects.create_user(username='manager', password='pass12345')
         self.other_user = User.objects.create_user(username='other', password='pass12345')
+        self.hostess = User.objects.create_user(username='hostess', password='pass12345')
         self.invitation = Invitation.objects.create(
             slug='mis-xv',
             host_name='Natalia',
@@ -87,6 +90,147 @@ class RsvpFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_role_groups_are_available(self):
+        admin_group = Group.objects.get(name='Administrador de invitaciones')
+        hostess_group = Group.objects.get(name='Hostess / Recepcionista')
+
+        self.assertTrue(admin_group.permissions.filter(codename='manage_invitation_guests').exists())
+        self.assertTrue(admin_group.permissions.filter(codename='manage_invitation_hostesses').exists())
+        self.assertTrue(admin_group.permissions.filter(codename='view_reception_guest_list').exists())
+        self.assertTrue(admin_group.permissions.filter(codename='check_in_guest').exists())
+        self.assertTrue(hostess_group.permissions.filter(codename='view_reception_guest_list').exists())
+        self.assertTrue(hostess_group.permissions.filter(codename='check_in_guest').exists())
+
+    def test_hostess_can_open_reception_dashboard_only_when_assigned(self):
+        self.invitation.hostesses.add(self.hostess)
+        self.client.login(username='hostess', password='pass12345')
+
+        reception_response = self.client.get(reverse('invitations:hostess_dashboard', args=[self.invitation.slug]))
+        admin_response = self.client.get(reverse('invitations:dashboard', args=[self.invitation.slug]))
+
+        self.assertEqual(reception_response.status_code, 200)
+        self.assertTemplateUsed(reception_response, 'rsvp_hostess_dashboard.html')
+        self.assertEqual(admin_response.status_code, 403)
+
+    def test_unassigned_hostess_cannot_open_reception_dashboard(self):
+        self.client.login(username='hostess', password='pass12345')
+
+        response = self.client.get(reverse('invitations:hostess_dashboard', args=[self.invitation.slug]))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_can_create_and_assign_hostess(self):
+        self.client.login(username='manager', password='pass12345')
+
+        response = self.client.post(
+            reverse('invitations:api_hostesses_list_create', args=[self.invitation.slug]),
+            data='{"username": "recepcion", "first_name": "Recepcion", "password": "temp12345"}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 201)
+        user = get_user_model().objects.get(username='recepcion')
+        self.assertTrue(self.invitation.hostesses.filter(pk=user.pk).exists())
+        self.assertTrue(user.groups.filter(name='Hostess / Recepcionista').exists())
+
+    def test_hostess_can_list_reception_guests(self):
+        self.invitation.hostesses.add(self.hostess)
+        self.guest.has_responded = True
+        self.guest.is_attending = True
+        self.guest.confirmed_companions = 2
+        self.guest.save()
+        self.client.login(username='hostess', password='pass12345')
+
+        response = self.client.get(reverse('invitations:api_hostess_guests', args=[self.invitation.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()[0]['name'], 'Familia Perez')
+
+    def test_hostess_list_only_includes_confirmed_attending_guests(self):
+        self.invitation.hostesses.add(self.hostess)
+        Guest.objects.create(
+            invitation=self.invitation,
+            name='Familia Sin Confirmar',
+            max_companions=2,
+        )
+        Guest.objects.create(
+            invitation=self.invitation,
+            name='Familia No Asiste',
+            max_companions=2,
+            has_responded=True,
+            is_attending=False,
+        )
+        self.guest.has_responded = True
+        self.guest.is_attending = True
+        self.guest.confirmed_companions = 2
+        self.guest.save()
+        self.client.login(username='hostess', password='pass12345')
+
+        response = self.client.get(reverse('invitations:api_hostess_guests', args=[self.invitation.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([guest['name'] for guest in response.json()], ['Familia Perez'])
+
+    def test_hostess_can_check_in_guest_by_token(self):
+        self.invitation.hostesses.add(self.hostess)
+        self.guest.has_responded = True
+        self.guest.is_attending = True
+        self.guest.confirmed_companions = 2
+        self.guest.save()
+        self.client.login(username='hostess', password='pass12345')
+
+        response = self.client.post(
+            reverse('invitations:api_hostess_check_in', args=[self.invitation.slug]),
+            data=f'{{"token_or_url": "http://testserver/{self.invitation.slug}/?guest={self.guest.token}", "method": "qr"}}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'success')
+        self.guest.refresh_from_db()
+        self.assertIsNotNone(self.guest.checked_in_at)
+        self.assertEqual(self.guest.checked_in_by, self.hostess)
+        self.assertEqual(self.guest.check_in_method, 'qr')
+
+    def test_hostess_cannot_check_in_guest_without_confirmation(self):
+        self.invitation.hostesses.add(self.hostess)
+        self.client.login(username='hostess', password='pass12345')
+
+        response = self.client.post(
+            reverse('invitations:api_hostess_check_in', args=[self.invitation.slug]),
+            data=f'{{"token_or_url": "{self.guest.token}", "method": "qr"}}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['status'], 'error')
+        self.assertIn('no hizo la confirmación', response.json()['message'])
+        self.guest.refresh_from_db()
+        self.assertIsNone(self.guest.checked_in_at)
+
+    def test_duplicate_check_in_does_not_overwrite_original_validation(self):
+        self.invitation.hostesses.add(self.hostess)
+        self.guest.has_responded = True
+        self.guest.is_attending = True
+        self.guest.confirmed_companions = 2
+        self.guest.checked_in_at = timezone.now()
+        self.guest.checked_in_by = self.manager
+        self.guest.check_in_method = 'manual'
+        self.guest.save()
+        self.client.login(username='hostess', password='pass12345')
+
+        response = self.client.post(
+            reverse('invitations:api_hostess_check_in', args=[self.invitation.slug]),
+            data=f'{{"token_or_url": "{self.guest.token}", "method": "qr"}}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'duplicate')
+        self.guest.refresh_from_db()
+        self.assertEqual(self.guest.checked_in_by, self.manager)
+        self.assertEqual(self.guest.check_in_method, 'manual')
+
     def test_guest_can_submit_rsvp_with_token(self):
         response = self.client.post(reverse('rsvp:submit', args=[self.invitation.slug]), {
             'guest_token': str(self.guest.token),
@@ -99,6 +243,8 @@ class RsvpFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data['guest']['confirmed_companions'], 2)
+        self.assertEqual(data['guest']['name'], 'Familia Perez')
+        self.assertEqual(data['guest']['alias'], 'Los Perez')
         self.assertTrue(data['guest']['has_responded'])
         self.assertTrue(data['guest']['is_attending'])
         self.guest.refresh_from_db()
@@ -205,6 +351,37 @@ class RsvpFlowTests(TestCase):
         self.assertEqual(response_without_guest.status_code, 200)
         self.assertEqual(response_with_invalid_guest.status_code, 200)
         self.assertEqual(GuestVisit.objects.count(), 0)
+
+    def test_confirmed_attending_guest_sees_qr_button(self):
+        self.guest.has_responded = True
+        self.guest.is_attending = True
+        self.guest.confirmed_companions = 2
+        self.guest.save()
+
+        response = self.client.get(
+            reverse('invitations:detail', args=[self.invitation.slug]),
+            {'guest': str(self.guest.token)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="rsvpQrButton"')
+        self.assertNotContains(response, 'id="rsvpQrButton" class="btn btn-success btn-lg hover-lift px-5 py-3 d-none"')
+        self.assertContains(response, f'/mis-xv/?guest={self.guest.token}')
+
+    def test_declined_guest_does_not_see_active_qr_button(self):
+        self.guest.has_responded = True
+        self.guest.is_attending = False
+        self.guest.confirmed_companions = 0
+        self.guest.save()
+
+        response = self.client.get(
+            reverse('invitations:detail', args=[self.invitation.slug]),
+            {'guest': str(self.guest.token)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="rsvpQrButton"')
+        self.assertContains(response, 'd-none')
 
     def test_guests_api_includes_visit_count(self):
         self.client.login(username='manager', password='pass12345')
