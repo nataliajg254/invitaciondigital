@@ -13,7 +13,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.db.models import Count
 from invitations.models import Invitation
-from .models import Guest
+from .models import Guest, GuestCheckIn
 from xhtml2pdf import pisa
 from io import BytesIO
 import openpyxl
@@ -526,6 +526,7 @@ def api_hostess_detail(request, slug, user_id):
 
 
 def serialize_reception_guest(guest):
+    remaining_passes = max((guest.confirmed_companions or 0) - (guest.checked_in_count or 0), 0)
     return {
         'id': guest.id,
         'name': guest.name,
@@ -535,6 +536,9 @@ def serialize_reception_guest(guest):
         'has_responded': guest.has_responded,
         'is_attending': guest.is_attending,
         'confirmed_companions': guest.confirmed_companions,
+        'checked_in_count': guest.checked_in_count,
+        'remaining_passes': remaining_passes,
+        'is_fully_checked_in': guest.has_responded and guest.is_attending and remaining_passes == 0,
         'checked_in_at': guest.checked_in_at.isoformat() if guest.checked_in_at else None,
         'checked_in_by_name': guest.checked_in_by.get_username() if guest.checked_in_by else '',
         'check_in_method': guest.check_in_method,
@@ -594,28 +598,82 @@ def api_hostess_check_in(request, slug):
     if guest is None:
         return JsonResponse({'status': 'error', 'message': 'No se encontró un invitado válido para esta invitación.'}, status=404)
 
-    if not guest.has_responded or not guest.is_attending:
+    with transaction.atomic():
+        guest = Guest.objects.select_for_update().get(pk=guest.pk)
+
+        if not guest.has_responded or not guest.is_attending:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'No se permite la entrada porque este invitado no hizo la confirmación correspondiente.',
+                'guest': serialize_reception_guest(guest),
+            }, status=403)
+
+        remaining_passes = max((guest.confirmed_companions or 0) - (guest.checked_in_count or 0), 0)
+        if remaining_passes <= 0:
+            return JsonResponse({
+                'status': 'complete',
+                'message': 'Este invitado ya utilizó todos sus pases confirmados.',
+                'guest': serialize_reception_guest(guest),
+            }, status=200)
+
+        raw_pass_count = body.get('pass_count')
+        if raw_pass_count in (None, ''):
+            return JsonResponse({
+                'status': 'requires_pass_count',
+                'message': 'Indica cuántos pases se validarán en esta entrada.',
+                'guest': serialize_reception_guest(guest),
+            }, status=200)
+
+        try:
+            pass_count = int(raw_pass_count)
+        except (TypeError, ValueError):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'El número de pases debe ser válido.',
+                'guest': serialize_reception_guest(guest),
+            }, status=400)
+
+        if pass_count <= 0:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Debes validar al menos 1 pase.',
+                'guest': serialize_reception_guest(guest),
+            }, status=400)
+
+        if pass_count > remaining_passes:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Solo quedan {remaining_passes} pase(s) disponibles para este invitado.',
+                'guest': serialize_reception_guest(guest),
+            }, status=400)
+
+        normalized_method = 'qr' if method == 'qr' else 'manual'
+        now = timezone.now()
+        if not guest.checked_in_at:
+            guest.checked_in_at = now
+            guest.checked_in_by = request.user
+            guest.check_in_method = normalized_method
+        guest.checked_in_count += pass_count
+        guest.check_in_notes = notes
+        guest.save(update_fields=['checked_in_at', 'checked_in_count', 'checked_in_by', 'check_in_method', 'check_in_notes', 'updated_at'])
+
+        GuestCheckIn.objects.create(
+            invitation=invitation,
+            guest=guest,
+            pass_count=pass_count,
+            checked_in_by=request.user,
+            method=normalized_method,
+            notes=notes,
+        )
+
+        remaining_after = max((guest.confirmed_companions or 0) - (guest.checked_in_count or 0), 0)
+        if remaining_after:
+            message = f'Entrada registrada. Quedan {remaining_after} pase(s) pendiente(s).'
+        else:
+            message = 'Entrada registrada. Todos los pases quedaron validados.'
+
         return JsonResponse({
-            'status': 'error',
-            'message': 'No se permite la entrada porque este invitado no hizo la confirmación correspondiente.',
+            'status': 'success',
+            'message': message,
             'guest': serialize_reception_guest(guest),
-        }, status=403)
-
-    if guest.checked_in_at:
-        return JsonResponse({
-            'status': 'duplicate',
-            'message': 'Este invitado ya fue validado previamente.',
-            'guest': serialize_reception_guest(guest),
-        }, status=200)
-
-    guest.checked_in_at = timezone.now()
-    guest.checked_in_by = request.user
-    guest.check_in_method = 'qr' if method == 'qr' else 'manual'
-    guest.check_in_notes = notes
-    guest.save(update_fields=['checked_in_at', 'checked_in_by', 'check_in_method', 'check_in_notes', 'updated_at'])
-
-    return JsonResponse({
-        'status': 'success',
-        'message': 'Entrada validada correctamente.',
-        'guest': serialize_reception_guest(guest),
-    })
+        })

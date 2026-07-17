@@ -31,6 +31,7 @@ class Guest(models.Model):
         ('manual', 'Manual'),
     ]
     checked_in_at = models.DateTimeField(blank=True, null=True, verbose_name="Fecha de entrada")
+    checked_in_count = models.PositiveIntegerField(default=0, verbose_name="Pases validados")
     checked_in_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -75,3 +76,28 @@ class GuestVisit(models.Model):
 
     def __str__(self):
         return f"{self.guest.name} - {self.visited_at:%Y-%m-%d %H:%M}"
+
+
+class GuestCheckIn(models.Model):
+    invitation = models.ForeignKey(Invitation, related_name='guest_checkins', on_delete=models.CASCADE)
+    guest = models.ForeignKey(Guest, related_name='checkins', on_delete=models.CASCADE)
+    pass_count = models.PositiveIntegerField(verbose_name="Pases validados")
+    checked_in_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='guest_checkins',
+        verbose_name="Validado por",
+    )
+    method = models.CharField(max_length=10, choices=Guest.CHECK_IN_METHOD_CHOICES, verbose_name="Método")
+    notes = models.TextField(blank=True, verbose_name="Notas")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de validación")
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Entrada de invitado"
+        verbose_name_plural = "Entradas de invitados"
+
+    def __str__(self):
+        return f"{self.guest.name} - {self.pass_count} pase(s)"

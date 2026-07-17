@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from invitations.models import Invitation, InvitationWhatsAppMessage
 from rsvp.admin import normalize_whatsapp_phone
-from rsvp.models import Guest, GuestVisit
+from rsvp.models import Guest, GuestCheckIn, GuestVisit
 
 
 class RsvpFlowTests(TestCase):
@@ -181,7 +181,7 @@ class RsvpFlowTests(TestCase):
 
         response = self.client.post(
             reverse('invitations:api_hostess_check_in', args=[self.invitation.slug]),
-            data=f'{{"token_or_url": "http://testserver/{self.invitation.slug}/?guest={self.guest.token}", "method": "qr"}}',
+            data=f'{{"token_or_url": "http://testserver/{self.invitation.slug}/?guest={self.guest.token}", "method": "qr", "pass_count": 2}}',
             content_type='application/json',
         )
 
@@ -189,8 +189,60 @@ class RsvpFlowTests(TestCase):
         self.assertEqual(response.json()['status'], 'success')
         self.guest.refresh_from_db()
         self.assertIsNotNone(self.guest.checked_in_at)
+        self.assertEqual(self.guest.checked_in_count, 2)
         self.assertEqual(self.guest.checked_in_by, self.hostess)
         self.assertEqual(self.guest.check_in_method, 'qr')
+        self.assertEqual(GuestCheckIn.objects.get(guest=self.guest).pass_count, 2)
+
+    def test_hostess_can_check_in_guest_in_partial_passes(self):
+        self.invitation.hostesses.add(self.hostess)
+        self.guest.has_responded = True
+        self.guest.is_attending = True
+        self.guest.confirmed_companions = 2
+        self.guest.save()
+        self.client.login(username='hostess', password='pass12345')
+
+        first_response = self.client.post(
+            reverse('invitations:api_hostess_check_in', args=[self.invitation.slug]),
+            data=f'{{"token_or_url": "{self.guest.token}", "method": "qr", "pass_count": 1}}',
+            content_type='application/json',
+        )
+        second_response = self.client.post(
+            reverse('invitations:api_hostess_check_in', args=[self.invitation.slug]),
+            data=f'{{"token_or_url": "{self.guest.token}", "method": "qr", "pass_count": 1}}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(first_response.json()['guest']['checked_in_count'], 1)
+        self.assertEqual(first_response.json()['guest']['remaining_passes'], 1)
+        self.assertEqual(second_response.status_code, 200)
+        self.assertEqual(second_response.json()['guest']['checked_in_count'], 2)
+        self.assertEqual(second_response.json()['guest']['remaining_passes'], 0)
+        self.guest.refresh_from_db()
+        self.assertEqual(self.guest.checked_in_count, 2)
+        self.assertEqual(GuestCheckIn.objects.filter(guest=self.guest).count(), 2)
+
+    def test_hostess_check_in_without_pass_count_requests_pass_count(self):
+        self.invitation.hostesses.add(self.hostess)
+        self.guest.has_responded = True
+        self.guest.is_attending = True
+        self.guest.confirmed_companions = 2
+        self.guest.save()
+        self.client.login(username='hostess', password='pass12345')
+
+        response = self.client.post(
+            reverse('invitations:api_hostess_check_in', args=[self.invitation.slug]),
+            data=f'{{"token_or_url": "{self.guest.token}", "method": "qr"}}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'requires_pass_count')
+        self.assertEqual(response.json()['guest']['remaining_passes'], 2)
+        self.guest.refresh_from_db()
+        self.assertEqual(self.guest.checked_in_count, 0)
+        self.assertFalse(GuestCheckIn.objects.filter(guest=self.guest).exists())
 
     def test_hostess_cannot_check_in_guest_without_confirmation(self):
         self.invitation.hostesses.add(self.hostess)
@@ -208,11 +260,12 @@ class RsvpFlowTests(TestCase):
         self.guest.refresh_from_db()
         self.assertIsNone(self.guest.checked_in_at)
 
-    def test_duplicate_check_in_does_not_overwrite_original_validation(self):
+    def test_complete_check_in_does_not_overwrite_original_validation(self):
         self.invitation.hostesses.add(self.hostess)
         self.guest.has_responded = True
         self.guest.is_attending = True
         self.guest.confirmed_companions = 2
+        self.guest.checked_in_count = 2
         self.guest.checked_in_at = timezone.now()
         self.guest.checked_in_by = self.manager
         self.guest.check_in_method = 'manual'
@@ -221,13 +274,14 @@ class RsvpFlowTests(TestCase):
 
         response = self.client.post(
             reverse('invitations:api_hostess_check_in', args=[self.invitation.slug]),
-            data=f'{{"token_or_url": "{self.guest.token}", "method": "qr"}}',
+            data=f'{{"token_or_url": "{self.guest.token}", "method": "qr", "pass_count": 1}}',
             content_type='application/json',
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['status'], 'duplicate')
+        self.assertEqual(response.json()['status'], 'complete')
         self.guest.refresh_from_db()
+        self.assertEqual(self.guest.checked_in_count, 2)
         self.assertEqual(self.guest.checked_in_by, self.manager)
         self.assertEqual(self.guest.check_in_method, 'manual')
 

@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from invitations.models import Invitation
-from rsvp.models import Guest
+from rsvp.models import Guest, GuestCheckIn
 
 
 class Command(BaseCommand):
@@ -38,11 +38,13 @@ class Command(BaseCommand):
         total = guests.count()
         confirmed_count = guests.filter(has_responded=True).count()
         whatsapp_count = guests.filter(whatsapp_sent=True).count()
+        checkin_count = GuestCheckIn.objects.filter(guest__in=guests).count()
 
         self.stdout.write(f'Alcance: {scope}')
         self.stdout.write(f'Invitados encontrados: {total}')
         self.stdout.write(f'Con confirmación activa: {confirmed_count}')
         self.stdout.write(f'Con WhatsApp enviado: {whatsapp_count}')
+        self.stdout.write(f'Entradas registradas: {checkin_count}')
 
         if total == 0:
             self.stdout.write(self.style.WARNING('No hay invitados para restablecer.'))
@@ -58,5 +60,12 @@ class Command(BaseCommand):
             confirmed_companions=0,
             dietary_restrictions='',
             whatsapp_sent=False,
+            checked_in_at=None,
+            checked_in_count=0,
+            checked_in_by=None,
+            check_in_method='',
+            check_in_notes='',
         )
+        deleted_checkins, _ = GuestCheckIn.objects.filter(guest__in=guests).delete()
         self.stdout.write(self.style.SUCCESS(f'Invitados restablecidos: {updated}'))
+        self.stdout.write(self.style.SUCCESS(f'Entradas eliminadas: {deleted_checkins}'))
