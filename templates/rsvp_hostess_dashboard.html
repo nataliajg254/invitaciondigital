@@ -322,6 +322,17 @@
             <section class="guest-list" id="guestList" aria-live="polite">
                 <div class="guest-card text-muted">Cargando invitados...</div>
             </section>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+                <div class="text-muted small" id="paginationInfo">0 invitados</div>
+                <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto;">
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+            <nav aria-label="Paginación de recepción" class="mt-2">
+                <ul class="pagination pagination-sm justify-content-center" id="paginationControls"></ul>
+            </nav>
         </div>
     </div>
 </main>
@@ -338,15 +349,24 @@
     let scannerRunning = false;
     let lastQrValue = '';
     let lastQrAt = 0;
+    let currentPage = 1;
+    let pageSize = 10;
 
     document.addEventListener('DOMContentLoaded', loadGuests);
     document.getElementById('searchInput').addEventListener('input', (event) => {
         searchText = event.target.value;
+        resetPagination();
         renderGuests();
     });
     document.getElementById('manualTokenInput').addEventListener('input', (event) => {
         document.getElementById('searchInput').value = event.target.value;
         searchText = event.target.value;
+        resetPagination();
+        renderGuests();
+    });
+    document.getElementById('pageSizeSelect').addEventListener('change', (event) => {
+        pageSize = parseInt(event.target.value, 10) || 10;
+        resetPagination();
         renderGuests();
     });
 
@@ -401,6 +421,58 @@
         });
     }
 
+    function getPaginatedGuests(filtered) {
+        const totalPages = Math.max(Math.ceil(filtered.length / pageSize), 1);
+        currentPage = Math.min(Math.max(currentPage, 1), totalPages);
+        const start = (currentPage - 1) * pageSize;
+        return {
+            items: filtered.slice(start, start + pageSize),
+            start: filtered.length ? start + 1 : 0,
+            end: Math.min(start + pageSize, filtered.length),
+            totalPages: totalPages,
+        };
+    }
+
+    function renderPagination(totalItems, totalPages) {
+        const controls = document.getElementById('paginationControls');
+        const info = document.getElementById('paginationInfo');
+        controls.innerHTML = '';
+
+        const pageData = getPaginatedGuests(getFilteredGuests());
+        info.innerText = totalItems
+            ? `${pageData.start}-${pageData.end} de ${totalItems} invitados`
+            : '0 invitados';
+
+        if (totalPages <= 1) return;
+
+        const addPage = (label, page, disabled = false, active = false) => {
+            controls.insertAdjacentHTML('beforeend', `
+                <li class="page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}">
+                    <button type="button" class="page-link" onclick="goToPage(${page})">${label}</button>
+                </li>
+            `);
+        };
+
+        addPage('&laquo;', currentPage - 1, currentPage === 1);
+
+        const startPage = Math.max(1, currentPage - 1);
+        const endPage = Math.min(totalPages, currentPage + 1);
+        for (let page = startPage; page <= endPage; page += 1) {
+            addPage(page, page, false, page === currentPage);
+        }
+
+        addPage('&raquo;', currentPage + 1, currentPage === totalPages);
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        renderGuests();
+    }
+
+    function resetPagination() {
+        currentPage = 1;
+    }
+
     function upsertGuestData(guestData) {
         const index = guestsData.findIndex(guest => String(guest.id) === String(guestData.id));
         if (index >= 0) {
@@ -413,6 +485,8 @@
     function renderGuests() {
         const list = document.getElementById('guestList');
         const guests = getFilteredGuests();
+        const pageData = getPaginatedGuests(guests);
+        const pageItems = pageData.items;
         const visibleCount = document.getElementById('visibleCount');
         list.innerHTML = '';
         if (visibleCount) {
@@ -421,10 +495,11 @@
 
         if (guests.length === 0) {
             list.innerHTML = '<div class="empty-state">No se encontraron invitados.</div>';
+            renderPagination(0, 1);
             return;
         }
 
-        guests.forEach(guest => {
+        pageItems.forEach(guest => {
             const checked = Boolean(guest.checked_in_at);
             const fullyChecked = Boolean(guest.is_fully_checked_in);
             const responseStatus = guest.has_responded
@@ -472,6 +547,7 @@
                 </article>
             `);
         });
+        renderPagination(guests.length, pageData.totalPages);
     }
 
     async function checkInGuest(guestId, method = 'manual') {
@@ -620,6 +696,7 @@
             if (payload.token_or_url) {
                 document.getElementById('searchInput').value = '';
                 searchText = '';
+                resetPagination();
                 renderGuests();
             }
 

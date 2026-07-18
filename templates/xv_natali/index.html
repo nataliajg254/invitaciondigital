@@ -601,7 +601,6 @@
       </div>
       <div class="modal-body">
         <h6 class="mb-1" id="guestQrName">{{ current_guest.name }}</h6>
-        {% if current_guest.alias %}<p class="text-muted mb-2" id="guestQrAlias">{{ current_guest.alias }}</p>{% else %}<p class="text-muted mb-2 d-none" id="guestQrAlias"></p>{% endif %}
         <p class="mb-3">Pases confirmados: <strong id="guestQrPasses">{{ current_guest.confirmed_companions }}</strong></p>
         <div id="guestQrCode" class="d-inline-block bg-white p-3 rounded-3" data-qr-url="{{ guest_invitation_url }}"></div>
         <p class="small text-muted mt-3 mb-0">Presenta este código en recepción.</p>
@@ -683,7 +682,6 @@
         confirmedCompanions: {{ current_guest.confirmed_companions|default:0 }},
         comments: '',
         guestName: '{{ current_guest.name|escapejs }}',
-        guestAlias: '{{ current_guest.alias|default_if_none:""|escapejs }}',
         guestUrl: '{{ guest_invitation_url|escapejs }}'
     };
     let guestQrRendered = false;
@@ -726,15 +724,10 @@
 
     function updateGuestQrDetails() {
         const nameEl = document.getElementById('guestQrName');
-        const aliasEl = document.getElementById('guestQrAlias');
         const passesEl = document.getElementById('guestQrPasses');
 
         if (nameEl) nameEl.textContent = rsvpState.guestName;
         if (passesEl) passesEl.textContent = rsvpState.confirmedCompanions;
-        if (aliasEl) {
-            aliasEl.textContent = rsvpState.guestAlias;
-            aliasEl.classList.toggle('d-none', !rsvpState.guestAlias);
-        }
     }
 
     function renderGuestQr() {
@@ -848,7 +841,6 @@
                     rsvpState.isAttending = data.guest.is_attending;
                     rsvpState.confirmedCompanions = data.guest.confirmed_companions;
                     rsvpState.guestName = data.guest.name || rsvpState.guestName;
-                    rsvpState.guestAlias = data.guest.alias || '';
                     rsvpState.comments = formData.get('comments') || '';
                     updateRsvpSection();
                     syncRsvpFormFromState();

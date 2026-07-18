@@ -11,7 +11,7 @@ from django.contrib.auth.models import Group
 from django.template.loader import get_template
 from django.conf import settings
 from django.utils import timezone
-from django.db.models import Count
+from django.db.models import Count, Max
 from invitations.models import Invitation
 from .models import Guest, GuestCheckIn
 from xhtml2pdf import pisa
@@ -233,7 +233,10 @@ def api_guests_list_create(request, slug):
     invitation = get_object_or_404(Invitation, slug=slug)
     
     if request.method == "GET":
-        guests = Guest.objects.filter(invitation=invitation).annotate(visit_count=Count('visits')).order_by('-created_at')
+        guests = Guest.objects.filter(invitation=invitation).annotate(
+            visit_count=Count('visits'),
+            latest_visit_at=Max('visits__visited_at'),
+        ).order_by('-created_at')
         data = [{
             'id': g.id,
             'name': g.name,
@@ -247,6 +250,7 @@ def api_guests_list_create(request, slug):
             'sheet_name': g.sheet_name,
             'whatsapp_sent': g.whatsapp_sent,
             'visit_count': g.visit_count,
+            'latest_visit_at': g.latest_visit_at.isoformat() if g.latest_visit_at else None,
             'checked_in_at': g.checked_in_at.isoformat() if g.checked_in_at else None,
             'checked_in_by_name': g.checked_in_by.get_username() if g.checked_in_by else '',
             'check_in_method': g.check_in_method,

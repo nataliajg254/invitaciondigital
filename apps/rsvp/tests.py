@@ -446,6 +446,7 @@ class RsvpFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()[0]['visit_count'], 2)
+        self.assertIsNotNone(response.json()[0]['latest_visit_at'])
 
     def test_guest_api_can_create_and_update_alias(self):
         self.client.login(username='manager', password='pass12345')

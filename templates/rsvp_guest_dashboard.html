@@ -163,6 +163,20 @@
                 </tbody>
             </table>
         </div>
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="text-muted small" id="paginationInfo">0 invitados</div>
+            <div class="d-flex align-items-center gap-2">
+                <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto;">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <nav aria-label="Paginación de invitados">
+                    <ul class="pagination pagination-sm mb-0" id="paginationControls"></ul>
+                </nav>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -285,6 +299,8 @@
     let whatsappMessagesData = null;
     let selectedWhatsAppGuestId = null;
     let hostessesData = [];
+    let currentPage = 1;
+    let pageSize = 25;
 
     // Load guests on start
     document.addEventListener('DOMContentLoaded', loadGuests);
@@ -312,6 +328,11 @@
             digits = `52${digits.slice(3)}`;
         }
         return digits;
+    }
+
+    function formatDateTime(value) {
+        if (!value) return '';
+        return new Date(value).toLocaleString('es-MX', {dateStyle: 'medium', timeStyle: 'short'});
     }
 
     async function loadGuests() {
@@ -458,14 +479,13 @@
     let currentWhatsAppFilter = 'all';
     let currentVisitFilter = 'all';
 
-    function renderTable() {
-        const tbody = document.getElementById('guestsTableBody');
-        tbody.innerHTML = '';
-        
-        const filtered = guestsData.filter(g => {
-            const matchText = g.name.toLowerCase().includes(currentFilterText.toLowerCase()) || 
-                              (g.alias && g.alias.toLowerCase().includes(currentFilterText.toLowerCase())) ||
-                              (g.phone_number && g.phone_number.includes(currentFilterText));
+    function getFilteredGuests() {
+        return guestsData.filter(g => {
+            const text = currentFilterText.toLowerCase();
+            const name = String(g.name || '').toLowerCase();
+            const alias = String(g.alias || '').toLowerCase();
+            const phone = String(g.phone_number || '');
+            const matchText = name.includes(text) || alias.includes(text) || phone.includes(currentFilterText);
                               
             let matchStatus = true;
             if (currentStatusFilter === 'confirmed') {
@@ -500,18 +520,84 @@
             
             return matchText && matchStatus && matchSheet && matchWhatsApp && matchVisit;
         });
+    }
+
+    function getPaginatedGuests(filtered) {
+        const totalPages = Math.max(Math.ceil(filtered.length / pageSize), 1);
+        currentPage = Math.min(Math.max(currentPage, 1), totalPages);
+        const start = (currentPage - 1) * pageSize;
+        return {
+            items: filtered.slice(start, start + pageSize),
+            start: filtered.length ? start + 1 : 0,
+            end: Math.min(start + pageSize, filtered.length),
+            totalPages: totalPages,
+        };
+    }
+
+    function renderPagination(totalItems, totalPages) {
+        const controls = document.getElementById('paginationControls');
+        const info = document.getElementById('paginationInfo');
+        controls.innerHTML = '';
+
+        const pageData = getPaginatedGuests(getFilteredGuests());
+        info.innerText = totalItems
+            ? `${pageData.start}-${pageData.end} de ${totalItems} invitados`
+            : '0 invitados';
+
+        if (totalPages <= 1) return;
+
+        const addPage = (label, page, disabled = false, active = false) => {
+            controls.insertAdjacentHTML('beforeend', `
+                <li class="page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}">
+                    <button type="button" class="page-link" onclick="goToPage(${page})">${label}</button>
+                </li>
+            `);
+        };
+
+        addPage('&laquo;', currentPage - 1, currentPage === 1);
+
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+        for (let page = startPage; page <= endPage; page += 1) {
+            addPage(page, page, false, page === currentPage);
+        }
+
+        addPage('&raquo;', currentPage + 1, currentPage === totalPages);
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        renderTable();
+    }
+
+    function resetPagination() {
+        currentPage = 1;
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('guestsTableBody');
+        tbody.innerHTML = '';
+
+        const filtered = getFilteredGuests();
+        const pageData = getPaginatedGuests(filtered);
+        const pageItems = pageData.items;
 
         if (filtered.length === 0) {
             tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No se encontraron invitados.</td></tr>`;
+            renderPagination(0, 1);
             return;
         }
 
-        filtered.forEach(g => {
+        pageItems.forEach(g => {
             const escapedName = escapeHtml(g.name);
             const escapedAlias = escapeHtml(g.alias);
             const escapedPhone = escapeHtml(g.phone_number);
             const escapedMaxCompanions = escapeHtml(g.max_companions);
             const escapedVisitCount = escapeHtml(g.visit_count || 0);
+            const latestVisit = g.latest_visit_at ? formatDateTime(g.latest_visit_at) : '';
+            const visitDisplay = latestVisit
+                ? `${escapedVisitCount}<br><small class="text-muted">${escapeHtml(latestVisit)}</small>`
+                : escapedVisitCount;
             let statusBadge = '<span class="badge bg-secondary">Sin respuesta</span>';
             let confirmedCount = '<span class="text-muted">-</span>';
             
@@ -543,7 +629,7 @@
                     <td>${g.phone_number ? escapedPhone : '<span class="text-muted">-</span>'}</td>
                     <td class="text-center">${escapedMaxCompanions}</td>
                     <td class="text-center">${confirmedCount}</td>
-                    <td class="text-center">${escapedVisitCount}</td>
+                    <td class="text-center">${visitDisplay}</td>
                     <td class="text-center">${statusBadge}</td>
                     <td class="text-center">${whatsappStatusBadge}</td>
                     <td class="text-end">
@@ -555,6 +641,7 @@
             `;
             tbody.insertAdjacentHTML('beforeend', row);
         });
+        renderPagination(filtered.length, pageData.totalPages);
     }
 
     function updateStats() {
@@ -580,28 +667,39 @@
     // Search filter
     document.getElementById('searchInput').addEventListener('input', (e) => {
         currentFilterText = e.target.value;
+        resetPagination();
         renderTable();
     });
 
     // Status filter
     document.getElementById('statusFilter').addEventListener('change', (e) => {
         currentStatusFilter = e.target.value;
+        resetPagination();
         renderTable();
     });
 
     // Sheet filter
     document.getElementById('sheetFilter').addEventListener('change', (e) => {
         currentSheetFilter = e.target.value;
+        resetPagination();
         renderTable();
     });
 
     document.getElementById('whatsappFilter').addEventListener('change', (e) => {
         currentWhatsAppFilter = e.target.value;
+        resetPagination();
         renderTable();
     });
 
     document.getElementById('visitFilter').addEventListener('change', (e) => {
         currentVisitFilter = e.target.value;
+        resetPagination();
+        renderTable();
+    });
+
+    document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
+        pageSize = parseInt(e.target.value, 10) || 25;
+        resetPagination();
         renderTable();
     });
 
